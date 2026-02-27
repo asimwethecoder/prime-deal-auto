@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# CDK
+cdk.out/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.*
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo
+*.d.ts.map
+
+# Source maps
+*.js.map
+
+# Test coverage
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
