@@ -21,7 +21,7 @@
 | Day | Deliverables | Notes |
 |-----|-------------|-------|
 | 4 | Build `AuthStack`: Cognito User Pool (email sign-up, auto-verify), User Pool Client (SRP flow), user groups (admin, dealer, user). Write post-confirmation Lambda trigger stub (sync Cognito user → Aurora `users` table). | Unit test the stack with CDK assertions. |
-| 5 | Build `DatabaseStack`: VPC (2 AZs, private subnets), Aurora Serverless v2 cluster (PostgreSQL 15, 0.5–4 ACU), Secrets Manager secret, Security Group, RDS Proxy. Wire exports (`ClusterEndpoint`, `SecretArn`, `VpcId`, etc.). | Unit test the stack. Verify `cdk synth` for both stacks. |
+| 5 | Build `DatabaseStack`: VPC (1 AZ, private isolated subnets, no NAT), Aurora Serverless v2 cluster (PostgreSQL 15, 0.5–4 ACU, single writer), Secrets Manager secret, Security Group, RDS Proxy, VPC endpoints. Wire exports (`ClusterEndpoint`, `SecretArn`, `VpcId`, etc.). | Unit test the stack. Verify `cdk synth` for both stacks. |
 | 6 | Deploy AuthStack + DatabaseStack to AWS. Run `schema.sql` migration against Aurora (via bastion or RDS Proxy). Verify Cognito sign-up flow works (AWS Console or CLI). Verify tables exist in Aurora. | First real AWS deployment. Capture stack outputs. |
 
 ### Spec 3: CDK Storage + API Stacks (Days 7–9)

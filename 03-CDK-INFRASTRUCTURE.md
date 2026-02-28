@@ -28,18 +28,19 @@ Resources:
 Exports: `UserPoolId`, `UserPoolClientId`, `UserPoolArn`
 
 ### 2. DatabaseStack
-Aurora PostgreSQL Serverless v2 with auto-scaling, multi-AZ, and Secrets Manager.
+Aurora PostgreSQL Serverless v2 with auto-scaling in a single AZ and Secrets Manager.
 
 Resources:
-- VPC (2 AZs, private subnets for DB, public for NAT)
+- VPC (1 AZ, private isolated subnets, no NAT Gateway)
 - Aurora Serverless v2 Cluster (PostgreSQL 15)
   - Min capacity: 0.5 ACU, Max: 4 ACU
-  - Writer instance + optional reader
-- Secrets Manager secret (auto-rotation 30 days)
+  - Single writer instance (reads and writes on same instance)
+- Secrets Manager secret (rotation deferred to production)
 - Security Group (allow Lambda access on port 5432)
 - RDS Proxy (connection pooling for Lambda)
+- VPC Endpoints (Secrets Manager, RDS)
 
-Exports: `ClusterEndpoint`, `ReaderEndpoint`, `SecretArn`, `SecurityGroupId`, `VpcId`, `PrivateSubnetIds`
+Exports: `ClusterEndpoint`, `SecretArn`, `SecurityGroupId`, `VpcId`, `PrivateSubnetIds`
 
 ### 3. StorageStack
 S3 bucket for car images with CloudFront CDN distribution.

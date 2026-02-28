@@ -29,7 +29,7 @@ The goal is to provide Kiro with enough context to create a spec-driven architec
 |-------|-----------|-------|
 | API | **API Gateway (REST)** | Regional REST API with Lambda proxy integration |
 | Compute | AWS Lambda (Node.js 20) | Route handlers, business logic |
-| Database | **Amazon Aurora PostgreSQL Serverless v2** | Auto-scaling, read/write splitting |
+| Database | **Amazon Aurora PostgreSQL Serverless v2** | Auto-scaling, single writer (single AZ for dev) |
 | Caching | **API Gateway caching** | Response caching at the API layer (cheaper than ElastiCache) |
 | Search | **Amazon OpenSearch Serverless** | Full-text search, facets, suggestions |
 | Storage | Amazon S3 | Car images, assets |
@@ -444,8 +444,7 @@ NEXT_PUBLIC_S3_BUCKET=prime-deal-auto-images
 NEXT_PUBLIC_SITE_URL=https://primedealauto.com
 
 # Backend Lambda environment (set via CDK)
-DB_HOST=prime-deal-auto-db.cluster-xxxxx.us-east-1.rds.amazonaws.com
-DB_READ_HOST=prime-deal-auto-db.cluster-ro-xxxxx.us-east-1.rds.amazonaws.com
+DB_HOST=prime-deal-auto-db.proxy-xxxxx.us-east-1.rds.amazonaws.com
 DB_NAME=primedealauto
 DB_SECRET_ARN=arn:aws:secretsmanager:us-east-1:xxxxx:secret:prime-deal-auto-db-xxxxx
 S3_BUCKET=prime-deal-auto-images

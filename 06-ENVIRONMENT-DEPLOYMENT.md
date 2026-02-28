@@ -44,8 +44,7 @@ NEXT_PUBLIC_SITE_NAME=Prime Deal Auto
 
 ```bash
 # Database (Aurora)
-DB_HOST=                           # Aurora cluster endpoint (via RDS Proxy)
-DB_READ_HOST=                      # Aurora reader endpoint
+DB_HOST=                           # RDS Proxy endpoint (single writer, reads + writes)
 DB_NAME=primedealauto
 DB_PORT=5432
 DB_SECRET_ARN=                     # Secrets Manager ARN
@@ -193,7 +192,7 @@ Lambda functions connect to Aurora via RDS Proxy (in the same VPC).
 
 | Service | Estimated Cost | Notes |
 |---------|---------------|-------|
-| Aurora Serverless v2 | $15-30 | 0.5 ACU minimum, scales to 0 when idle |
+| Aurora Serverless v2 | $15-30 | 0.5 ACU minimum, single AZ, single writer |
 | API Gateway | $3-10 | First 1M requests free, caching ~$15/mo if enabled |
 | Lambda | $0-5 | First 1M requests free |
 | S3 | $1-3 | Storage + requests |
@@ -203,6 +202,7 @@ Lambda functions connect to Aurora via RDS Proxy (in the same VPC).
 | Amplify Hosting | $0-5 | Build minutes + hosting |
 | Bedrock | $5-20 | Per-token pricing, depends on chat usage |
 | SES | $0-1 | First 62K emails free |
-| **Total** | **~$50-130/mo** | Low traffic estimate |
+| VPC Endpoints | $7-15 | ~$7/mo per interface endpoint |
+| **Total** | **~$55-145/mo** | Low traffic estimate, no NAT Gateway |
 
 Note: OpenSearch Serverless has a minimum cost. Consider deferring it to Phase 2 and using PostgreSQL full-text search initially.
