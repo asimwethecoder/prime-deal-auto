@@ -13,6 +13,7 @@ export class DatabaseStack extends cdk.Stack {
   public readonly secret: secretsmanager.ISecret;
   public readonly proxy: rds.DatabaseProxy;
   public readonly dbSecurityGroup: ec2.SecurityGroup;
+  public readonly proxySecurityGroup: ec2.SecurityGroup;
 
   constructor(scope: Construct, id: string, props: DatabaseStackProps = {}) {
     super(scope, id, props);
@@ -44,8 +45,8 @@ export class DatabaseStack extends cdk.Stack {
       allowAllOutbound: false,
     });
 
-    // Security group for RDS Proxy
-    const proxySecurityGroup = new ec2.SecurityGroup(this, 'ProxySecurityGroup', {
+    // Security group for RDS Proxy (exported for Lambda to use)
+    this.proxySecurityGroup = new ec2.SecurityGroup(this, 'ProxySecurityGroup', {
       vpc: this.vpc,
       description: 'Security group for RDS Proxy - allows port 5432 inbound from Lambda',
       allowAllOutbound: false,
@@ -53,17 +54,19 @@ export class DatabaseStack extends cdk.Stack {
 
     // Aurora SG: allow inbound 5432 from RDS Proxy SG only
     this.dbSecurityGroup.addIngressRule(
-      proxySecurityGroup,
+      this.proxySecurityGroup,
       ec2.Port.tcp(5432),
       'Allow PostgreSQL from RDS Proxy',
     );
 
     // Proxy SG: allow outbound to Aurora SG on 5432
-    proxySecurityGroup.addEgressRule(
+    this.proxySecurityGroup.addEgressRule(
       this.dbSecurityGroup,
       ec2.Port.tcp(5432),
       'Allow outbound to Aurora',
     );
+
+    // Inbound from Lambda is added in ApiStack via CfnSecurityGroupIngress to avoid circular dependency.
 
     // Aurora Serverless v2 cluster — single writer, PostgreSQL 15
     this.cluster = new rds.DatabaseCluster(this, 'AuroraCluster', {
@@ -93,7 +96,7 @@ export class DatabaseStack extends cdk.Stack {
       secrets: [this.secret],
       vpc: this.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-      securityGroups: [proxySecurityGroup],
+      securityGroups: [this.proxySecurityGroup],
       requireTLS: true,
       iamAuth: false,
     });
@@ -121,6 +124,21 @@ export class DatabaseStack extends cdk.Stack {
       value: this.proxy.endpoint,
       description: 'RDS Proxy endpoint — use as DB_HOST in Lambda',
       exportName: `${this.stackName}-RdsProxyEndpoint`,
+    });
+
+    new cdk.CfnOutput(this, 'ProxySecurityGroupId', {
+      value: this.proxySecurityGroup.securityGroupId,
+      description: 'RDS Proxy security group ID',
+      exportName: `${this.stackName}-ProxySecurityGroupId`,
+    });
+
+    // Legacy export: keep Aurora SG output so CloudFormation does not delete the export (ApiStack still imports it).
+    // Use the same logical ID as the currently deployed stack so this is an in-place update, not delete+add.
+    // Remove this output after Phase 2 (ApiStack deploy), then deploy DatabaseStack again (Phase 3).
+    new cdk.CfnOutput(this, 'ExportsOutputFnGetAttAuroraSecurityGroup75F699F6GroupId12D936A9', {
+      value: this.dbSecurityGroup.securityGroupId,
+      description: 'Aurora SG ID (legacy; remove after ApiStack migration)',
+      exportName: 'PrimeDeals-Database:ExportsOutputFnGetAttAuroraSecurityGroup75F699F6GroupId12D936A9',
     });
 
     // cdk-nag suppressions

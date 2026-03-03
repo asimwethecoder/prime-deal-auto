@@ -1,0 +1,106 @@
+import * as cdk from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as rds from 'aws-cdk-lib/aws-rds';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { Construct } from 'constructs';
+import { NagSuppressions } from 'cdk-nag';
+import * as path from 'path';
+
+export interface MigrationStackProps extends cdk.StackProps {
+  vpc: ec2.IVpc;
+  proxySecurityGroupId: string;
+  rdsProxy: rds.IDatabaseProxy;
+  dbSecret: secretsmanager.ISecret;
+}
+
+export class MigrationStack extends cdk.Stack {
+  public readonly migrationFunction: lambda.Function;
+
+  constructor(scope: Construct, id: string, props: MigrationStackProps) {
+    super(scope, id, props);
+
+    // Lambda security group
+    const lambdaSecurityGroup = new ec2.SecurityGroup(this, 'MigrationLambdaSG', {
+      vpc: props.vpc,
+      description: 'Security group for migration Lambda',
+      allowAllOutbound: false,
+    });
+
+    // Allow Lambda to connect to RDS Proxy
+    lambdaSecurityGroup.addEgressRule(
+      ec2.Peer.securityGroupId(props.proxySecurityGroupId),
+      ec2.Port.tcp(5432),
+      'Allow outbound to RDS Proxy'
+    );
+
+    // Allow HTTPS for Secrets Manager
+    lambdaSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      'Allow HTTPS outbound for Secrets Manager'
+    );
+
+    // Ingress rule on RDS Proxy SG
+    new ec2.CfnSecurityGroupIngress(this, 'AllowMigrationLambdaToRdsProxy', {
+      groupId: props.proxySecurityGroupId,
+      sourceSecurityGroupId: lambdaSecurityGroup.securityGroupId,
+      ipProtocol: 'tcp',
+      fromPort: 5432,
+      toPort: 5432,
+      description: 'Allow migration Lambda to connect to RDS Proxy',
+    });
+
+    // Migration Lambda function
+    this.migrationFunction = new NodejsFunction(this, 'MigrationHandler', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      architecture: lambda.Architecture.ARM_64,
+      entry: path.join(__dirname, '../../../backend/scripts/migration-lambda.js'),
+      handler: 'handler',
+      memorySize: 512,
+      timeout: cdk.Duration.minutes(5),
+      vpc: props.vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [lambdaSecurityGroup],
+      environment: {
+        DB_HOST: props.rdsProxy.endpoint,
+        DB_NAME: 'primedealauto',
+        SECRET_ARN: props.dbSecret.secretArn,
+      },
+    });
+
+    // Grant permissions
+    props.dbSecret.grantRead(this.migrationFunction);
+
+    // Output
+    new cdk.CfnOutput(this, 'MigrationFunctionName', {
+      value: this.migrationFunction.functionName,
+      description: 'Migration Lambda function name',
+    });
+
+    new cdk.CfnOutput(this, 'MigrationFunctionArn', {
+      value: this.migrationFunction.functionArn,
+      description: 'Migration Lambda function ARN',
+    });
+
+    // cdk-nag suppressions
+    NagSuppressions.addResourceSuppressions(this.migrationFunction, [
+      {
+        id: 'AwsSolutions-IAM4',
+        reason: 'AWSLambdaBasicExecutionRole and AWSLambdaVPCAccessExecutionRole managed policies required for VPC-attached Lambda',
+      },
+      {
+        id: 'AwsSolutions-L1',
+        reason: 'Node.js 20 is the latest LTS runtime supported by Lambda at time of implementation',
+      },
+    ], true);
+
+    NagSuppressions.addResourceSuppressions(lambdaSecurityGroup, [
+      {
+        id: 'AwsSolutions-EC23',
+        reason: 'HTTPS egress to 0.0.0.0/0 required for Secrets Manager VPC endpoint access',
+      },
+    ]);
+  }
+}

@@ -1,49 +1,91 @@
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { corsResponse, error } from './lib/response';
+import { handleGetCars, handleGetCarById } from './handlers/cars.handler';
+import { handleHealth } from './handlers/health.handler';
+import {
+  handleSearch,
+  handleFacets,
+  handleSuggestions,
+  handleReindex,
+} from './handlers/search.handler';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-  'Content-Type': 'application/json',
-};
+type RouteHandler = (
+  event: APIGatewayProxyEvent
+) => Promise<APIGatewayProxyResult>;
 
-function response(statusCode: number, body: object): APIGatewayProxyResult {
-  return {
-    statusCode,
-    headers: corsHeaders,
-    body: JSON.stringify(body),
-  };
+interface Route {
+  method: string;
+  pattern: RegExp;
+  handler: RouteHandler;
+}
+
+const routes: Route[] = [
+  // Health check
+  { method: 'GET', pattern: /^\/health$/, handler: handleHealth },
+
+  // Cars routes
+  { method: 'GET', pattern: /^\/cars$/, handler: handleGetCars },
+  { method: 'GET', pattern: /^\/cars\/([^/]+)$/, handler: handleGetCarById },
+
+  // Search routes
+  { method: 'GET', pattern: /^\/search$/, handler: handleSearch },
+  { method: 'GET', pattern: /^\/search\/facets$/, handler: handleFacets },
+  { method: 'GET', pattern: /^\/search\/suggestions$/, handler: handleSuggestions },
+  { method: 'POST', pattern: /^\/admin\/reindex$/, handler: handleReindex },
+];
+
+function matchRoute(
+  method: string,
+  path: string
+): { handler: RouteHandler; params: Record<string, string> } | null {
+  for (const route of routes) {
+    if (route.method !== method) continue;
+
+    const match = path.match(route.pattern);
+    if (match) {
+      // Extract path parameters from regex groups
+      const params: Record<string, string> = {};
+      if (match[1]) {
+        params.carId = match[1];
+      }
+      return { handler: route.handler, params };
+    }
+  }
+  return null;
 }
 
 export async function handler(
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> {
+  const { httpMethod, path } = event;
+
+  // Handle CORS preflight
+  if (httpMethod === 'OPTIONS') {
+    return corsResponse();
+  }
+
   try {
-    const method = event.httpMethod;
-    const path = event.path;
+    const matched = matchRoute(httpMethod, path);
 
-    // CORS preflight
-    if (method === 'OPTIONS') {
-      return response(200, {});
+    if (!matched) {
+      return error('Route not found', 'NOT_FOUND', 404);
     }
 
-    // Health check
-    if (method === 'GET' && path === '/health') {
-      return response(200, { success: true, data: { status: 'ok' } });
-    }
+    // Merge extracted params with existing pathParameters
+    event.pathParameters = {
+      ...event.pathParameters,
+      ...matched.params,
+    };
 
-    // 404 fallback
-    return response(404, {
-      success: false,
-      error: 'Not found',
-      code: 'NOT_FOUND',
+    return await matched.handler(event);
+  } catch (err) {
+    console.error('Unhandled error:', {
+      error: err instanceof Error ? err.message : 'Unknown error',
+      stack: err instanceof Error ? err.stack : undefined,
+      path,
+      method: httpMethod,
     });
-  } catch (error) {
-    console.error('Unhandled error:', error);
-    return response(500, {
-      success: false,
-      error: 'Internal server error',
-      code: 'INTERNAL_ERROR',
-    });
+
+    return error('Internal server error', 'INTERNAL_ERROR', 500);
   }
 }

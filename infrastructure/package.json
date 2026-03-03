@@ -6,7 +6,10 @@
     "build": "tsc",
     "test": "vitest --run",
     "synth": "cdk synth",
-    "deploy": "cdk deploy --all --profile prime-deal-auto",
+    "deploy": "npm run deploy:guard -- && cdk deploy --all --require-approval never --profile prime-deal-auto",
+    "deploy:guard": "node -e \"const { execSync } = require('child_process'); const account = execSync('aws sts get-caller-identity --profile prime-deal-auto --query Account --output text').toString().trim(); const required = '141814481613'; if (account !== required) { console.error('Wrong account: ' + account + '. Required: ' + required); process.exit(1); } console.log('Deploy target account: ' + account);\"",
+    "deploy:database": "npm run deploy:guard -- && cdk deploy PrimeDeals-Database --require-approval never --profile prime-deal-auto",
+    "deploy:api": "npm run deploy:guard -- && cdk deploy PrimeDeals-Api --require-approval never --profile prime-deal-auto",
     "diff": "cdk diff --profile prime-deal-auto",
     "destroy": "cdk destroy --all --profile prime-deal-auto"
   },
