@@ -1,0 +1,9 @@
+# Car Images Directory
+
+Place car-related images here:
+- Car photos
+- Car detail images
+- Car gallery images
+
+Note: Production car images will be served from S3/CloudFront.
+This folder is for placeholder/demo images during development.

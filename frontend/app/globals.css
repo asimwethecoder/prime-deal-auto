@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+@theme {
+  /* Use DM Sans (set by next/font on body) for font-sans */
+  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+}

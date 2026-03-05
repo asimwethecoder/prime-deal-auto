@@ -46,14 +46,8 @@ export interface Lead {
   updated_at: string;
 }
 
-export interface ChatMessage {
-  id: string;
-  session_id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  metadata: Record<string, unknown>;
-  created_at: string;
-}
+// Chat types are now in chat.types.ts
+export * from './chat.types';
 
 export interface CarImage {
   id: string;

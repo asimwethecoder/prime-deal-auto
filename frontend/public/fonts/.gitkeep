@@ -1,0 +1,11 @@
+# Fonts Directory
+
+Place custom font files here if needed:
+- Custom web fonts (WOFF2, WOFF)
+- Brand-specific fonts
+
+Note: We're using next/font with Google Fonts (DM Sans) for optimization.
+Only add custom fonts here if they're not available on Google Fonts.
+
+Example:
+- bebas-neue.woff2 (if needed for logo/branding)

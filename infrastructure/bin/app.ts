@@ -8,6 +8,7 @@ import { StorageStack } from '../lib/stacks/storage-stack';
 import { ApiStack } from '../lib/stacks/api-stack';
 import { SearchStack } from '../lib/stacks/search-stack';
 import { MigrationStack } from '../lib/stacks/migration-stack';
+import { HostingStack } from '../lib/stacks/hosting-stack';
 
 const app = new cdk.App();
 
@@ -75,6 +76,15 @@ const migrationStack = new MigrationStack(app, 'PrimeDeals-Migration', {
 
 migrationStack.addDependency(databaseStack);
 
+// Spec 4: Hosting stack (Amplify)
+const hostingStack = new HostingStack(app, 'PrimeDeals-Hosting', {
+  env,
+  apiUrl: apiStack.api.url,
+});
+
+// HostingStack depends on ApiStack (needs API URL)
+hostingStack.addDependency(apiStack);
+
 // DEPLOYMENT INSTRUCTIONS:
 // Due to circular dependency (SearchStack needs ApiStack role, ApiStack needs SearchStack endpoint),
 // use this two-stage deployment:
@@ -90,4 +100,3 @@ migrationStack.addDependency(databaseStack);
 
 // Future stacks (added in subsequent specs):
 // - PrimeDeals-Monitoring (Spec 12)
-// - PrimeDeals-Hosting (Spec 4)

@@ -46,7 +46,10 @@ function matchRoute(
       // Extract path parameters from regex groups
       const params: Record<string, string> = {};
       if (match[1]) {
-        params.carId = match[1];
+        // Determine parameter name based on route pattern
+        if (path.startsWith('/cars/')) {
+          params.carId = match[1];
+        }
       }
       return { handler: route.handler, params };
     }

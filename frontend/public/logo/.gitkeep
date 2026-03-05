@@ -1,0 +1,11 @@
+# Logo Directory
+
+Place logo files here:
+- logo.svg (primary logo)
+- logo-white.svg (white version for dark backgrounds)
+- logo-icon.svg (icon-only version)
+- logo.png (raster fallback)
+
+Recommended formats:
+- SVG for scalability
+- PNG with transparent background as fallback

@@ -93,6 +93,9 @@ export class ApiStack extends cdk.Stack {
         FRONTEND_URL: process.env.FRONTEND_URL || '*',
         // OpenSearch endpoint - import from SearchStack export if available
         ...(props.opensearchEndpoint && { OPENSEARCH_ENDPOINT: props.opensearchEndpoint }),
+        // Bedrock configuration for AI Chat Assistant
+        BEDROCK_MODEL_ID: 'anthropic.claude-sonnet-4-20250514-v1:0',
+        BEDROCK_REGION: 'us-east-1',
       },
       bundling: {
         minify: true,
@@ -104,6 +107,17 @@ export class ApiStack extends cdk.Stack {
     // Grant Lambda permissions
     props.dbSecret.grantRead(this.lambdaFunction);
     props.bucket.grantReadWrite(this.lambdaFunction);
+
+    // Grant Bedrock permissions for AI Chat Assistant
+    this.lambdaFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['bedrock:InvokeModel'],
+        resources: [
+          `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0`,
+        ],
+      })
+    );
 
     // Grant OpenSearch Serverless permissions if endpoint provided
     if (props.opensearchEndpoint) {
@@ -119,6 +133,132 @@ export class ApiStack extends cdk.Stack {
         })
       );
     }
+
+    // ========================================
+    // VPC Proxy Lambda Pattern for Chat
+    // ========================================
+    // This pattern avoids NAT Gateway costs (~$33-70/month) by using:
+    // - Chat Lambda (no VPC) → calls Bedrock directly
+    // - VPC Proxy Lambda (VPC) → handles database operations
+    // Cost: ~$0-2/month for extra Lambda invocations
+    // Reference: https://serverlessfirst.com/lambda-vpc-internet-access-no-nat-gateway/
+
+    // VPC Proxy Lambda — handles all database operations from inside VPC
+    const vpcProxyLambda = new NodejsFunction(this, 'VpcProxyHandler', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      architecture: lambda.Architecture.ARM_64,
+      entry: path.join(__dirname, '../../../backend/src/vpc-proxy.ts'),
+      handler: 'handler',
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(30),
+      vpc: props.vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [lambdaSecurityGroup],
+      environment: {
+        DB_HOST: props.rdsProxy.endpoint,
+        DB_NAME: 'primedealauto',
+        SECRET_ARN: props.dbSecret.secretArn,
+      },
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        externalModules: ['@aws-sdk/client-secrets-manager'],
+      },
+    });
+
+    // Grant VPC Proxy Lambda permissions
+    props.dbSecret.grantRead(vpcProxyLambda);
+
+    // Suppress cdk-nag warnings for VPC Proxy Lambda
+    NagSuppressions.addResourceSuppressions(
+      vpcProxyLambda,
+      [
+        {
+          id: 'AwsSolutions-IAM4',
+          reason: 'AWS managed policies (AWSLambdaBasicExecutionRole, AWSLambdaVPCAccessExecutionRole) are acceptable for Lambda execution roles',
+          appliesTo: [
+            'Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole',
+            'Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole',
+          ],
+        },
+        {
+          id: 'AwsSolutions-L1',
+          reason: 'Using Node.js 20 which is the latest LTS runtime supported by CDK',
+        },
+      ],
+      true // Apply to children (role, etc.)
+    );
+
+    // Chat Lambda — NOT in VPC, can access Bedrock directly
+    const chatLambda = new NodejsFunction(this, 'ChatHandler', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      architecture: lambda.Architecture.ARM_64,
+      entry: path.join(__dirname, '../../../backend/src/chat-lambda.ts'),
+      handler: 'handler',
+      memorySize: 1024,
+      timeout: cdk.Duration.seconds(60), // Longer timeout for Bedrock calls
+      environment: {
+        VPC_PROXY_FUNCTION_NAME: vpcProxyLambda.functionName,
+        FRONTEND_URL: process.env.FRONTEND_URL || '*',
+        // TEMPORARY: Using Claude 3.5 Sonnet v2 until Claude Sonnet 4 access is granted via AWS Support
+        // TARGET: anthropic.claude-sonnet-4-20250514-v1:0 (requires support case for new accounts)
+        BEDROCK_MODEL_ID: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+        BEDROCK_REGION: 'us-east-1',
+      },
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        externalModules: ['@aws-sdk/client-lambda'],
+      },
+    });
+
+    // Grant Chat Lambda permission to invoke VPC Proxy Lambda
+    vpcProxyLambda.grantInvoke(chatLambda);
+
+    // Suppress cdk-nag warnings for Chat Lambda
+    NagSuppressions.addResourceSuppressions(
+      chatLambda,
+      [
+        {
+          id: 'AwsSolutions-IAM4',
+          reason: 'AWS managed policy (AWSLambdaBasicExecutionRole) is acceptable for Lambda execution role',
+          appliesTo: [
+            'Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole',
+          ],
+        },
+        {
+          id: 'AwsSolutions-L1',
+          reason: 'Using Node.js 20 which is the latest LTS runtime supported by CDK',
+        },
+      ],
+      true // Apply to children (role, etc.)
+    );
+
+    // Grant Chat Lambda Bedrock permissions
+    chatLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['bedrock:InvokeModel'],
+        resources: [
+          // TEMPORARY: Using Claude 3.5 Sonnet until Claude Sonnet 4 model access is granted
+          `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0`,
+          // TODO: Add Claude Sonnet 4 after requesting model access
+          // `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0`,
+        ],
+      })
+    );
+
+    // Suppress cdk-nag warnings for Bedrock permissions (wildcard required for model access)
+    NagSuppressions.addResourceSuppressions(
+      chatLambda,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Bedrock model access requires specific model ARN pattern',
+        },
+      ],
+      true
+    );
 
     // API Gateway REST API
     this.api = new apigateway.RestApi(this, 'Api', {
@@ -286,6 +426,38 @@ export class ApiStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.COGNITO,
     }); // Admin group checked in Lambda
 
+    // Chat Lambda integration (separate from main Lambda)
+    const chatLambdaIntegration = new apigateway.LambdaIntegration(chatLambda, {
+      proxy: true,
+    });
+
+    // /chat routes
+    const chatResource = this.api.root.addResource('chat');
+    
+    // POST /chat — send message and get AI response (public, no caching)
+    chatResource.addMethod('POST', chatLambdaIntegration);
+
+    // /chat/sessions routes
+    const sessionsResource = chatResource.addResource('sessions');
+    
+    // GET /chat/sessions — list all sessions for authenticated user (requires auth, no caching)
+    sessionsResource.addMethod('GET', chatLambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
+    // /chat/sessions/{id} routes
+    const sessionByIdResource = sessionsResource.addResource('{id}');
+    
+    // GET /chat/sessions/{id} — get full session history (public with token or auth, no caching)
+    sessionByIdResource.addMethod('GET', chatLambdaIntegration);
+    
+    // DELETE /chat/sessions/{id} — delete session (requires auth, no caching)
+    sessionByIdResource.addMethod('DELETE', chatLambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
     // CloudFormation outputs
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: this.api.url,
@@ -353,7 +525,7 @@ export class ApiStack extends cdk.Stack {
           'Resource::arn:aws:aoss:us-east-1:141814481613:collection/*',
           'Resource::arn:aws:aoss:us-east-1:141814481613:index/primedeals-cars/*',
         ],
-        reason: 'S3 bucket permissions use wildcard actions for object operations - required for image upload/download. OpenSearch permissions use wildcard for collection and index access - required for search operations.',
+        reason: 'S3 bucket permissions use wildcard actions for object operations - required for image upload/download. OpenSearch permissions use wildcard for collection and index access - required for search operations. Bedrock permissions scoped to specific Claude Sonnet 4 model ARN.',
       },
       {
         id: 'AwsSolutions-L1',

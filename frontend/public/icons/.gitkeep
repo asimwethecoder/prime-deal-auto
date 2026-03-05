@@ -1,0 +1,13 @@
+# Icons Directory
+
+Place icon files here:
+- favicon.ico
+- apple-touch-icon.png
+- Custom SVG icons
+- Social media icons
+
+Example structure:
+- favicon.ico
+- apple-touch-icon.png
+- icon-192x192.png
+- icon-512x512.png

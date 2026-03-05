@@ -45,8 +45,7 @@ export function getOpenSearchClient(): Client {
       }),
       node: endpoint,
       requestTimeout: 5000, // 5 second timeout
-      maxRetries: 3, // Retry up to 3 times
-      retryOnTimeout: true // Retry on timeout errors
+      maxRetries: 3 // Retry up to 3 times
     });
   }
 
