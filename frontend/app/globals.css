@@ -1,6 +1,21 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  /* Use DM Sans (set by next/font on body) for font-sans */
-  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+/* Layout fallbacks so page is never truncated and always scrollable */
+@layer base {
+  html {
+    min-height: 100%;
+    overflow-y: scroll;
+  }
+  body {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  body main {
+    flex: 1 1 auto;
+  }
 }
