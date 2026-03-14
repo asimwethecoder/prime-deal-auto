@@ -14,6 +14,13 @@ import { cn } from '@/lib/utils/cn';
 
 const LIMIT = 30;
 
+const STATUS_TABS = [
+  { value: 'all', label: 'All Listings' },
+  { value: 'active', label: 'Published' },
+  { value: 'pending', label: 'Drafts' },
+  { value: 'sold', label: 'Sold' },
+] as const;
+
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest', sortBy: 'created_at' as const, sortOrder: 'desc' as const },
   { value: 'oldest', label: 'Oldest', sortBy: 'created_at' as const, sortOrder: 'asc' as const },
@@ -170,6 +177,7 @@ export default function MyListingsPage() {
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const q = searchParams.get('q') ?? '';
   const sortValue = searchParams.get('sort') ?? 'newest';
+  const statusFilter = searchParams.get('status') ?? 'all';
 
   const [searchInput, setSearchInput] = useState(q);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -183,10 +191,11 @@ export default function MyListingsPage() {
     sortBy: sortConfig.sortBy,
     sortOrder: sortConfig.sortOrder,
     ...(q.trim() && { model: q.trim() }),
+    ...(statusFilter !== 'all' && { status: statusFilter }),
   };
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['dashboard-listings', page, q, sortValue],
+    queryKey: ['dashboard-listings', page, q, sortValue, statusFilter],
     queryFn: async () => {
       const res = await getCars(params);
       return res;
@@ -213,6 +222,16 @@ export default function MyListingsPage() {
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const next = new URLSearchParams(searchParams.toString());
       next.set('sort', e.target.value);
+      next.delete('page');
+      router.push(`?${next.toString()}`);
+    },
+    [searchParams, router]
+  );
+
+  const handleStatusChange = useCallback(
+    (status: string) => {
+      const next = new URLSearchParams(searchParams.toString());
+      next.set('status', status);
       next.delete('page');
       router.push(`?${next.toString()}`);
     },
@@ -248,6 +267,25 @@ export default function MyListingsPage() {
         </div>
 
         <div className="rounded-2xl border border-[#E1E1E1] bg-white overflow-hidden">
+          {/* Status Filter Tabs */}
+          <div className="flex border-b border-[#E1E1E1]">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => handleStatusChange(tab.value)}
+                className={cn(
+                  'px-6 py-3 text-[15px] font-medium transition-colors',
+                  statusFilter === tab.value
+                    ? 'text-[#405FF2] border-b-2 border-[#405FF2] bg-[#E9F2FF]/50'
+                    : 'text-[#050B20]/70 hover:text-[#050B20] hover:bg-[#F9FBFC]'
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:px-6 border-b border-[#E1E1E1]">
             <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 max-w-md">
               <Icon src="search-alt-2-svgrepo-com.svg" width={16} height={16} className="shrink-0 text-[#050B20]" aria-hidden />

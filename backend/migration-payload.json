@@ -1,1 +1,1 @@
-{"migrationFile":"007_car_images_constraints.sql"}
+{"migrationFile": "008_add_video_url.sql"}

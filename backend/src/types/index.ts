@@ -13,6 +13,7 @@ export interface Car {
   color?: string;
   description?: string;
   features: string[];
+  video_url?: string;
   status: 'active' | 'sold' | 'pending' | 'deleted';
   views_count: number;
   created_at: string;

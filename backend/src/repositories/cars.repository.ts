@@ -37,44 +37,66 @@ export interface CreateCarData {
   description?: string;
   features?: string[];
   status: string;
+  video_url?: string;
 }
 
 export class CarRepository {
   async create(data: CreateCarData): Promise<Car> {
     const pool = await getPool();
     const featuresJson = JSON.stringify(data.features ?? []);
-    const result = await pool.query(
-      `INSERT INTO cars (
-        make, model, variant, year, price, mileage, condition,
-        body_type, transmission, fuel_type, color, description, features, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14)
-      RETURNING *`,
-      [
-        data.make,
-        data.model,
-        data.variant ?? null,
-        data.year,
-        data.price,
-        data.mileage,
-        data.condition,
-        data.body_type ?? null,
-        data.transmission,
-        data.fuel_type,
-        data.color ?? null,
-        data.description ?? null,
-        featuresJson,
-        data.status,
-      ]
-    );
-    return result.rows[0] as Car;
+    try {
+      const result = await pool.query(
+        `INSERT INTO cars (
+          make, model, variant, year, price, mileage, condition,
+          body_type, transmission, fuel_type, color, description, features, status, video_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14, $15)
+        RETURNING *`,
+        [
+          data.make,
+          data.model,
+          data.variant ?? null,
+          data.year,
+          data.price,
+          data.mileage,
+          data.condition,
+          data.body_type ?? null,
+          data.transmission,
+          data.fuel_type,
+          data.color ?? null,
+          data.description ?? null,
+          featuresJson,
+          data.status,
+          data.video_url ?? null,
+        ]
+      );
+      return result.rows[0] as Car;
+    } catch (err) {
+      console.error('CarRepository.create error:', {
+        error: err instanceof Error ? err.message : 'Unknown error',
+        code: (err as { code?: string }).code,
+        detail: (err as { detail?: string }).detail,
+        data: { make: data.make, model: data.model, year: data.year },
+      });
+      throw err;
+    }
   }
 
   async findAll(filters: CarFilters): Promise<{ cars: Car[]; total: number }> {
     const pool = await getPool();
 
-    const conditions: string[] = ['c.status = $1'];
-    const params: unknown[] = [filters.status || 'active'];
-    let paramIndex = 2;
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    // Status filter: if provided, filter by it; if undefined, show all non-deleted (for admin "All" view)
+    if (filters.status) {
+      conditions.push(`c.status = $${paramIndex}`);
+      params.push(filters.status);
+      paramIndex++;
+    } else {
+      // When no status filter, show all except deleted (for admin "All" view)
+      conditions.push(`c.status != 'deleted'`);
+    }
 
     if (filters.make) {
       conditions.push(`c.make ILIKE $${paramIndex}`);
@@ -127,7 +149,7 @@ export class CarRepository {
       paramIndex++;
     }
 
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
 
     // Whitelist sort column to prevent SQL injection
     const sortColumn = ALLOWED_SORT_COLUMNS.includes(filters.sortBy)
@@ -246,6 +268,10 @@ export class CarRepository {
     if (data.status !== undefined) {
       updates.push(`status = $${paramIndex++}`);
       params.push(data.status);
+    }
+    if (data.video_url !== undefined) {
+      updates.push(`video_url = $${paramIndex++}`);
+      params.push(data.video_url || null);
     }
 
     if (updates.length === 0) {

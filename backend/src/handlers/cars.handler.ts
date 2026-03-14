@@ -32,6 +32,19 @@ export async function handleGetCars(
 ): Promise<APIGatewayProxyResult> {
   const query = event.queryStringParameters || {};
 
+  // Check if user is admin for status filtering
+  const userIsAdmin = isAdmin(event);
+  const statusFilter = query.status;
+  
+  // Only allow status filtering for admin users
+  // For non-admin, always show only 'active' cars
+  let status: string | undefined;
+  if (userIsAdmin && statusFilter) {
+    // Admin can filter by specific status or see all (no filter)
+    status = statusFilter === 'all' ? undefined : statusFilter;
+  }
+  // Non-admin users don't pass status, so service defaults to 'active'
+
   const input: ListCarsInput = {
     make: query.make,
     model: query.model,
@@ -43,6 +56,7 @@ export async function handleGetCars(
     transmission: query.transmission,
     fuelType: query.fuelType,
     bodyType: query.bodyType,
+    status: userIsAdmin ? status : undefined, // Only pass status for admin
     limit: query.limit ? parseInt(query.limit, 10) : 20,
     offset: query.offset ? parseInt(query.offset, 10) : 0,
     sortBy: query.sortBy,
@@ -134,13 +148,23 @@ export async function handleCreateCar(
       description: typeof body.description === 'string' ? body.description.trim() || undefined : undefined,
       features: Array.isArray(body.features) ? body.features.filter((f): f is string => typeof f === 'string') : undefined,
       status: status as CreateCarInput['status'],
+      video_url: typeof body.video_url === 'string' ? body.video_url.trim() || undefined : undefined,
     };
 
     const car = await carService.createCar(input);
     return success(car, 201);
   } catch (err) {
-    console.error('Error creating car:', err);
-    return error('Failed to create car', 'INTERNAL_ERROR', 500);
+    console.error('Error creating car:', {
+      error: err instanceof Error ? err.message : 'Unknown error',
+      stack: err instanceof Error ? err.stack : undefined,
+      name: err instanceof Error ? err.name : undefined,
+    });
+    // In development, include more error details
+    const isDev = process.env.NODE_ENV === 'development' || process.env.STAGE === 'dev';
+    const message = isDev && err instanceof Error 
+      ? `Failed to create car: ${err.message}` 
+      : 'Failed to create car';
+    return error(message, 'INTERNAL_ERROR', 500);
   }
 }
 
@@ -250,6 +274,10 @@ export async function handleUpdateCar(
         return error(`status must be one of: ${STATUS_VALUES.join(', ')}`, 'VALIDATION_ERROR', 400);
       }
       input.status = body.status as CreateCarInput['status'];
+    }
+
+    if (body.video_url !== undefined) {
+      input.video_url = typeof body.video_url === 'string' ? body.video_url.trim() || undefined : undefined;
     }
 
     const car = await carService.updateCar(carId, input);

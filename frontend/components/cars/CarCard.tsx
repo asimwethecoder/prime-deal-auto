@@ -27,8 +27,9 @@ const cardHover = {
 };
 
 export function CarCard({ car, badge, originalPrice }: CarCardProps) {
-  const primaryImage = car.images.find((img) => img.is_primary) || car.images[0];
-  const imageUrl = primaryImage?.cloudfront_url || '/placeholder-car.jpg';
+  const images = car.images ?? [];
+  const primaryImage = images.find((img) => img.is_primary) || images[0];
+  const imageUrl = primaryImage?.cloudfront_url || car.primary_image_url || '/placeholder-car.jpg';
 
   const showGreatPrice = originalPrice != null && originalPrice > car.price;
   const lowMileageBadge = car.mileage < 80000 ? 'Low Mileage' : undefined;

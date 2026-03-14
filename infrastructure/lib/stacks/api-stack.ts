@@ -88,7 +88,8 @@ export class ApiStack extends cdk.Stack {
         S3_BUCKET: props.bucket.bucketName,
         // CloudFront domain for serving images (uses CloudFront if available, otherwise S3 direct)
         ...(props.distribution && { CLOUDFRONT_DOMAIN: props.distribution.distributionDomainName }),
-        FRONTEND_URL: process.env.FRONTEND_URL || '*',
+        // CORS: Allow all origins since we have multiple frontends (localhost, Amplify)
+        FRONTEND_URL: '*',
         // OpenSearch endpoint - import from SearchStack export if available
         ...(props.opensearchEndpoint && { OPENSEARCH_ENDPOINT: props.opensearchEndpoint }),
       },
@@ -198,7 +199,8 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(60), // Longer timeout for Bedrock calls
       environment: {
         VPC_PROXY_FUNCTION_NAME: vpcProxyLambda.functionName,
-        FRONTEND_URL: process.env.FRONTEND_URL || '*',
+        // CORS: Allow all origins since we have multiple frontends (localhost, Amplify)
+        FRONTEND_URL: '*',
         // Using Amazon Nova Pro for best quality
         // If hitting daily token limits, request quota increase via AWS Support
         // Claude Sonnet 4 requires Anthropic use case form (not yet approved)
@@ -313,6 +315,41 @@ export class ApiStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.COGNITO,
     }); // Admin only
 
+    // /cars/{carId}/images routes (image management)
+    const carImagesResource = carByIdResource.addResource('images');
+    carImagesResource.addMethod('POST', lambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    }); // Admin only - save image metadata
+
+    // /cars/{carId}/images/upload-url - get presigned upload URL
+    const uploadUrlResource = carImagesResource.addResource('upload-url');
+    uploadUrlResource.addMethod('POST', lambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    }); // Admin only
+
+    // /cars/{carId}/images/reorder - reorder images
+    const reorderResource = carImagesResource.addResource('reorder');
+    reorderResource.addMethod('PUT', lambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    }); // Admin only
+
+    // /cars/{carId}/images/{imageId} routes
+    const imageByIdResource = carImagesResource.addResource('{imageId}');
+    imageByIdResource.addMethod('DELETE', lambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    }); // Admin only
+
+    // /cars/{carId}/images/{imageId}/primary - set primary image
+    const primaryResource = imageByIdResource.addResource('primary');
+    primaryResource.addMethod('PUT', lambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    }); // Admin only
+
     // /search routes
     const searchResource = this.api.root.addResource('search');
     
@@ -413,6 +450,37 @@ export class ApiStack extends cdk.Stack {
       'method.request.querystring.field',
     ]);
     suggestionsMethodCfn.addPropertyOverride('Integration.CacheNamespace', suggestionsResource.resourceId);
+
+    // /makes routes (for car make/model/variant dropdowns)
+    const makesResource = this.api.root.addResource('makes');
+    makesResource.addMethod('GET', lambdaIntegration); // Public - get all makes
+    makesResource.addMethod('POST', lambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    }); // Admin only - create make
+
+    // /makes/{makeId}/models routes
+    const makeByIdResource = makesResource.addResource('{makeId}');
+    const modelsResource = makeByIdResource.addResource('models');
+    modelsResource.addMethod('GET', lambdaIntegration); // Public - get models for make
+    modelsResource.addMethod('POST', lambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    }); // Admin only - create model
+
+    // /models routes (for variants)
+    const modelsRootResource = this.api.root.addResource('models');
+    const modelByIdResource = modelsRootResource.addResource('{modelId}');
+    const variantsResource = modelByIdResource.addResource('variants');
+    variantsResource.addMethod('GET', lambdaIntegration); // Public - get variants for model
+    variantsResource.addMethod('POST', lambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    }); // Admin only - create variant
+
+    // /leads routes (contact form)
+    const leadsResource = this.api.root.addResource('leads');
+    leadsResource.addMethod('POST', lambdaIntegration); // Public - submit lead
 
     // /admin routes
     const adminResource = this.api.root.addResource('admin');

@@ -16,6 +16,7 @@ export interface CreateCarInput {
   description?: string;
   features?: string[];
   status?: 'active' | 'pending' | 'sold' | 'deleted';
+  video_url?: string;
 }
 
 export interface ListCarsInput {
@@ -29,6 +30,7 @@ export interface ListCarsInput {
   transmission?: string;
   fuelType?: string;
   bodyType?: string;
+  status?: string; // For admin filtering
   limit?: number;
   offset?: number;
   sortBy?: string;
@@ -60,7 +62,8 @@ export class CarService {
       offset,
       sortBy: input.sortBy || 'created_at',
       sortOrder: input.sortOrder || 'desc',
-      status: 'active', // Public endpoint always filters active
+      // If status is provided (admin), use it; otherwise default to 'active' for public
+      status: input.status || 'active',
     };
 
     const { cars, total } = await this.repository.findAll(filters);
@@ -95,6 +98,7 @@ export class CarService {
       description: input.description,
       features: input.features,
       status: input.status ?? 'active',
+      video_url: input.video_url,
     };
     return this.repository.create(data);
   }
@@ -116,6 +120,7 @@ export class CarService {
     if (input.description !== undefined) data.description = input.description;
     if (input.features !== undefined) data.features = input.features;
     if (input.status !== undefined) data.status = input.status;
+    if (input.video_url !== undefined) data.video_url = input.video_url;
 
     return this.repository.update(id, data);
   }

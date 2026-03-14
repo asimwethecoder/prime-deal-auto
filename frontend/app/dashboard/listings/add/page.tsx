@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +11,7 @@ import { getMakes, getModels, getVariants, createMake, createModel, createVarian
 import { getImageUploadUrl, saveImageMetadata } from '@/lib/api/images';
 import { ApiError } from '@/lib/api/types';
 import { Input } from '@/components/ui/Input';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { SelectOrCreate, SelectOption } from '@/components/ui/SelectOrCreate';
@@ -64,6 +65,7 @@ const addListingSchema = z.object({
   description: z.string().max(5000).optional(),
   price: z.coerce.number().min(0, 'Price must be 0 or more'),
   features: z.array(z.string()).default([]),
+  video_url: z.string().url('Please enter a valid URL').max(500).optional().or(z.literal('')),
 });
 
 // Use z.input for form input types (what the form fields receive)
@@ -97,6 +99,7 @@ export default function AddListingPage() {
     handleSubmit,
     setValue,
     watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<SchemaInput, unknown, SchemaOutput>({
     resolver: zodResolver(addListingSchema),
@@ -114,6 +117,7 @@ export default function AddListingPage() {
       description: '',
       price: 0,
       features: [],
+      video_url: '',
     },
   });
 
@@ -226,6 +230,7 @@ export default function AddListingPage() {
           color: data.color?.trim() || undefined,
           description: data.description?.trim() || undefined,
           features: data.features?.length ? data.features : undefined,
+          video_url: data.video_url?.trim() || undefined,
           status,
         });
 
@@ -288,21 +293,39 @@ export default function AddListingPage() {
 
         <div className="rounded-2xl border border-[#E1E1E1] bg-white overflow-hidden">
           <div className="border-b border-[#E1E1E1] flex flex-wrap gap-0">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'px-6 py-4 text-[15px] font-medium transition-colors',
-                  activeTab === tab.id
-                    ? 'text-[#405FF2] border-b-2 border-[#405FF2] bg-[#E9F2FF]/50'
-                    : 'text-[#050B20]/70 hover:text-[#050B20] hover:bg-[#F9FBFC]'
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {TABS.map((tab, index) => {
+              const currentIndex = TABS.findIndex((t) => t.id === activeTab);
+              const isCompleted = index < currentIndex;
+              const isCurrent = tab.id === activeTab;
+              
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'px-6 py-4 text-[15px] font-medium transition-colors flex items-center gap-2',
+                    isCurrent
+                      ? 'text-[#405FF2] border-b-2 border-[#405FF2] bg-[#E9F2FF]/50'
+                      : isCompleted
+                        ? 'text-[#3D923A] hover:bg-[#F9FBFC]'
+                        : 'text-[#050B20]/70 hover:text-[#050B20] hover:bg-[#F9FBFC]'
+                  )}
+                >
+                  <span className={cn(
+                    'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
+                    isCurrent
+                      ? 'bg-[#405FF2] text-white'
+                      : isCompleted
+                        ? 'bg-[#3D923A] text-white'
+                        : 'bg-[#E1E1E1] text-[#050B20]/70'
+                  )}>
+                    {isCompleted ? '✓' : index + 1}
+                  </span>
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
 
           <form className="p-6 sm:p-8" onSubmit={(e) => e.preventDefault()}>
@@ -358,11 +381,21 @@ export default function AddListingPage() {
                     error={errors.year?.message}
                     {...register('year')}
                   />
-                  <Input
-                    label="Mileage (km)"
-                    type="number"
-                    error={errors.mileage?.message}
-                    {...register('mileage')}
+                  <Controller
+                    name="mileage"
+                    control={control}
+                    render={({ field }) => (
+                      <NumberInput
+                        label="Mileage (km)"
+                        suffix="km"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        error={errors.mileage?.message}
+                        min={0}
+                        placeholder="0"
+                      />
+                    )}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -429,16 +462,22 @@ export default function AddListingPage() {
 
             {activeTab === 'price' && (
               <div className="space-y-5 max-w-md">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[18px] font-medium text-[#050B20]">R</span>
-                  <Input
-                    label="Price (ZAR)"
-                    type="number"
-                    placeholder="0"
-                    error={errors.price?.message}
-                    {...register('price')}
-                  />
-                </div>
+                <Controller
+                  name="price"
+                  control={control}
+                  render={({ field }) => (
+                    <NumberInput
+                      label="Price (ZAR)"
+                      prefix="R"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      error={errors.price?.message}
+                      min={0}
+                      placeholder="0"
+                    />
+                  )}
+                />
               </div>
             )}
 
@@ -465,47 +504,103 @@ export default function AddListingPage() {
             )}
 
             {activeTab === 'media' && (
-              <div className="space-y-4">
-                <p className="text-[15px] text-[#050B20]">
-                  Upload up to {MAX_IMAGES} images (JPEG, PNG, or WebP). The first image will be the main listing photo.
-                </p>
-                <label className="flex flex-col items-center justify-center w-full min-h-[160px] border-2 border-dashed border-[#E1E1E1] rounded-2xl cursor-pointer hover:bg-[#F9FBFC] transition-colors">
-                  <span className="text-[15px] text-[#405FF2] font-medium mt-2">Click to add images</span>
-                  <input type="file" accept={ACCEPT_IMAGES} multiple className="hidden" onChange={onFileChange} />
-                </label>
-                {imageFiles.length > 0 && (
-                  <ul className="flex flex-wrap gap-3">
-                    {imageFiles.map((file, index) => (
-                      <li key={`${file.name}-${index}`} className="relative w-24 h-24 rounded-xl overflow-hidden bg-[#E1E1E1] border border-[#E1E1E1]">
-                        <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600"
-                          aria-label="Remove image"
-                        >
-                          ×
-                        </button>
-                        {index === 0 && (
-                          <span className="absolute bottom-1 left-1 text-[10px] font-medium bg-[#405FF2] text-white px-1.5 py-0.5 rounded">Main</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+              <div className="space-y-6">
+                {/* Images Section */}
+                <div className="space-y-4">
+                  <p className="text-[15px] text-[#050B20]">
+                    Upload up to {MAX_IMAGES} images (JPEG, PNG, or WebP). The first image will be the main listing photo.
+                  </p>
+                  <label className="flex flex-col items-center justify-center w-full min-h-[160px] border-2 border-dashed border-[#E1E1E1] rounded-2xl cursor-pointer hover:bg-[#F9FBFC] transition-colors">
+                    <span className="text-[15px] text-[#405FF2] font-medium mt-2">Click to add images</span>
+                    <input type="file" accept={ACCEPT_IMAGES} multiple className="hidden" onChange={onFileChange} />
+                  </label>
+                  {imageFiles.length > 0 && (
+                    <ul className="flex flex-wrap gap-3">
+                      {imageFiles.map((file, index) => (
+                        <li key={`${file.name}-${index}`} className="relative w-24 h-24 rounded-xl overflow-hidden bg-[#E1E1E1] border border-[#E1E1E1]">
+                          <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600"
+                            aria-label="Remove image"
+                          >
+                            ×
+                          </button>
+                          {index === 0 && (
+                            <span className="absolute bottom-1 left-1 text-[10px] font-medium bg-[#405FF2] text-white px-1.5 py-0.5 rounded">Main</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Video URL Section */}
+                <div className="space-y-3 pt-4 border-t border-[#E1E1E1]">
+                  <div>
+                    <label className="block text-sm font-medium text-primary mb-2">Video URL (optional)</label>
+                    <p className="text-[14px] text-[#818181] mb-3">
+                      Add a YouTube or other video link to showcase the vehicle. Viewers will be able to watch the video on the listing page.
+                    </p>
+                    <Input
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      error={errors.video_url?.message}
+                      {...register('video_url')}
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
             <div className={cn(
-              'flex flex-col-reverse sm:flex-row gap-3 justify-end mt-8 pt-6 border-t border-[#E1E1E1]',
+              'flex flex-col-reverse sm:flex-row gap-3 justify-between mt-8 pt-6 border-t border-[#E1E1E1]',
               'sticky bottom-0 bg-white -mx-6 sm:-mx-8 px-6 sm:px-8 py-4 sm:py-0 sm:relative sm:bg-transparent sm:border-t'
             )}>
-              <Button type="button" variant="outline" onClick={handleSaveDraft} loading={isSubmitting} disabled={isSubmitting}>
-                Save as Draft
-              </Button>
-              <Button type="button" variant="primary" onClick={handlePublish} loading={isSubmitting} disabled={isSubmitting}>
-                Publish
-              </Button>
+              {/* Left side: Back button */}
+              <div className="flex gap-3">
+                {activeTab !== 'details' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const currentIndex = TABS.findIndex((t) => t.id === activeTab);
+                      if (currentIndex > 0) {
+                        setActiveTab(TABS[currentIndex - 1].id);
+                      }
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    ← Back
+                  </Button>
+                )}
+              </div>
+
+              {/* Right side: Next/Save/Publish buttons */}
+              <div className="flex gap-3">
+                <Button type="button" variant="outline" onClick={handleSaveDraft} loading={isSubmitting} disabled={isSubmitting}>
+                  Save as Draft
+                </Button>
+                {activeTab !== 'media' ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => {
+                      const currentIndex = TABS.findIndex((t) => t.id === activeTab);
+                      if (currentIndex < TABS.length - 1) {
+                        setActiveTab(TABS[currentIndex + 1].id);
+                      }
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    Next →
+                  </Button>
+                ) : (
+                  <Button type="button" variant="primary" onClick={handlePublish} loading={isSubmitting} disabled={isSubmitting}>
+                    Publish
+                  </Button>
+                )}
+              </div>
             </div>
           </form>
         </div>

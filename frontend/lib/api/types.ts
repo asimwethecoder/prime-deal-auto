@@ -24,6 +24,8 @@ export interface Car {
   updated_at: string;
   /** Present when returned from list endpoint (e.g. dashboard) */
   views_count?: number;
+  /** Optional video URL (YouTube, Vimeo, etc.) */
+  video_url?: string;
 }
 
 /**
@@ -43,6 +45,7 @@ export interface CarImage {
  */
 export interface CarWithImages extends Car {
   images: CarImage[];
+  primary_image_url?: string;
 }
 
 /**
@@ -105,6 +108,7 @@ export interface CreateCarRequest {
   description?: string;
   features?: string[];
   status?: Car['status'];
+  video_url?: string;
 }
 
 /**
