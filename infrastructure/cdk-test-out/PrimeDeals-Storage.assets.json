@@ -1,0 +1,36 @@
+{
+  "version": "50.0.0",
+  "files": {
+    "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6": {
+      "displayName": "PrimeDeals-Storage/Custom::S3AutoDeleteObjectsCustomResourceProvider Code",
+      "source": {
+        "path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "141814481613-us-east-1-bb42b9ca": {
+          "bucketName": "cdk-hnb659fds-assets-141814481613-us-east-1",
+          "objectKey": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::141814481613:role/cdk-hnb659fds-file-publishing-role-141814481613-us-east-1"
+        }
+      }
+    },
+    "ef7e5ec8b3089a4e9b28185332011e036f68e65957e094386f88e557c2be8eae": {
+      "displayName": "PrimeDeals-Storage Template",
+      "source": {
+        "path": "PrimeDeals-Storage.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "141814481613-us-east-1-cea60a68": {
+          "bucketName": "cdk-hnb659fds-assets-141814481613-us-east-1",
+          "objectKey": "ef7e5ec8b3089a4e9b28185332011e036f68e65957e094386f88e557c2be8eae.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::141814481613:role/cdk-hnb659fds-file-publishing-role-141814481613-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

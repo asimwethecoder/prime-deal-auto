@@ -1,0 +1,284 @@
+{
+ "Resources": {
+  "AmplifyServiceRole1EB3E935": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "amplify.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Description": "Service role for Amplify to access AWS resources",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Hosting/AmplifyServiceRole/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Amplify service role requires wildcard permissions for CloudWatch Logs",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "AmplifyServiceRoleDefaultPolicyA4A29B19": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": "arn:aws:logs:us-east-1:141814481613:log-group:/aws/amplify/*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "AmplifyServiceRoleDefaultPolicyA4A29B19",
+    "Roles": [
+     {
+      "Ref": "AmplifyServiceRole1EB3E935"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Hosting/AmplifyServiceRole/DefaultPolicy/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Amplify service role requires wildcard permissions for CloudWatch Logs",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "PrimeDealAutoApp": {
+   "Type": "AWS::Amplify::App",
+   "Properties": {
+    "BuildSpec": {
+     "Fn::Sub": "version: 1\nfrontend:\n  phases:\n    preBuild:\n      commands:\n        - cd frontend\n        - npm ci\n    build:\n      commands:\n        - npm run build\n  artifacts:\n    baseDirectory: frontend/.next\n    files:\n      - '**/*'\n  cache:\n    paths:\n      - frontend/node_modules/**/*\n      - frontend/.next/cache/**/*"
+    },
+    "CustomRules": [
+     {
+      "Source": "/<*>",
+      "Status": "404-200",
+      "Target": "/index.html"
+     }
+    ],
+    "Description": "Prime Deal Auto - Next.js 15 Frontend",
+    "EnvironmentVariables": [
+     {
+      "Name": "NEXT_PUBLIC_API_URL",
+      "Value": {
+       "Fn::Join": [
+        "",
+        [
+         "https://",
+         {
+          "Fn::ImportValue": "PrimeDeals-Api:ExportsOutputRefApiF70053CD5653BA4D"
+         },
+         ".execute-api.us-east-1.",
+         {
+          "Ref": "AWS::URLSuffix"
+         },
+         "/",
+         {
+          "Fn::ImportValue": "PrimeDeals-Api:ExportsOutputRefApiDeploymentStagev102147F91576080D6"
+         },
+         "/"
+        ]
+       ]
+      }
+     },
+     {
+      "Name": "_LIVE_UPDATES",
+      "Value": "[{\"pkg\":\"next\",\"type\":\"internal\",\"version\":\"latest\"}]"
+     }
+    ],
+    "IAMServiceRole": {
+     "Fn::GetAtt": [
+      "AmplifyServiceRole1EB3E935",
+      "Arn"
+     ]
+    },
+    "Name": "prime-deal-auto-frontend",
+    "Platform": "WEB_COMPUTE",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Hosting/PrimeDealAutoApp",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Amplify service role requires wildcard permissions for CloudWatch Logs",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "MainBranch": {
+   "Type": "AWS::Amplify::Branch",
+   "Properties": {
+    "AppId": {
+     "Fn::GetAtt": [
+      "PrimeDealAutoApp",
+      "AppId"
+     ]
+    },
+    "BranchName": "main",
+    "EnableAutoBuild": true,
+    "EnablePullRequestPreview": false,
+    "Framework": "Next.js - SSR",
+    "Stage": "PRODUCTION",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Hosting/MainBranch",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Amplify service role requires wildcard permissions for CloudWatch Logs",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/yWJSw7CIBQAz9I9PJH0AtoDaNoDGKQQX8svBWwawt0NdjUzGQ68Z8A6sUcq55UafEOZkpArEXt8FRQWyuiNIoN2fz69QXm0PK0SYYNBfUAZtLuF0NZ9E05+am3+yCnkVInzs4IlXr68hysH1i0RkW7ZJbQKxpM/GZLaiJAAAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Hosting/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "AmplifyAppId": {
+   "Description": "Amplify App ID",
+   "Value": {
+    "Fn::GetAtt": [
+     "PrimeDealAutoApp",
+     "AppId"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-AmplifyAppId"
+   }
+  },
+  "AmplifyAppUrl": {
+   "Description": "Amplify App URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://main.",
+      {
+       "Fn::GetAtt": [
+        "PrimeDealAutoApp",
+        "DefaultDomain"
+       ]
+      }
+     ]
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-AmplifyAppUrl"
+   }
+  },
+  "AmplifyConsoleUrl": {
+   "Description": "Amplify Console URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://console.aws.amazon.com/amplify/home?region=us-east-1#/",
+      {
+       "Fn::GetAtt": [
+        "PrimeDealAutoApp",
+        "AppId"
+       ]
+      }
+     ]
+    ]
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

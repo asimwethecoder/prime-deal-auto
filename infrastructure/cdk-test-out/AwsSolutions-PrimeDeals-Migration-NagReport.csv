@@ -1,0 +1,9 @@
+Rule ID,Resource ID,Compliance,Exception Reason,Rule Level,Rule Info
+"AwsSolutions-EC23","PrimeDeals-Migration/MigrationLambdaSG/Resource","Compliant","N/A","Error","The Security Group allows for 0.0.0.0/0 or ::/0 inbound access."
+"AwsSolutions-EC27","PrimeDeals-Migration/MigrationLambdaSG/Resource","Compliant","N/A","Error","The Security Group does not have a description."
+"AwsSolutions-EC23","PrimeDeals-Migration/AllowMigrationLambdaToRdsProxy","Compliant","N/A","Error","The Security Group allows for 0.0.0.0/0 or ::/0 inbound access."
+"AwsSolutions-IAM4","PrimeDeals-Migration/MigrationHandler/ServiceRole/Resource","Suppressed","AWSLambdaBasicExecutionRole and AWSLambdaVPCAccessExecutionRole managed policies required for VPC-attached Lambda","Error","The IAM user, role, or group uses AWS managed policies."
+"AwsSolutions-IAM4","PrimeDeals-Migration/MigrationHandler/ServiceRole/Resource","Suppressed","AWSLambdaBasicExecutionRole and AWSLambdaVPCAccessExecutionRole managed policies required for VPC-attached Lambda","Error","The IAM user, role, or group uses AWS managed policies."
+"AwsSolutions-IAM5","PrimeDeals-Migration/MigrationHandler/ServiceRole/Resource","Compliant","N/A","Error","The IAM entity contains wildcard permissions and does not have a cdk-nag rule suppression with evidence for those permission."
+"AwsSolutions-IAM5","PrimeDeals-Migration/MigrationHandler/ServiceRole/DefaultPolicy/Resource","Compliant","N/A","Error","The IAM entity contains wildcard permissions and does not have a cdk-nag rule suppression with evidence for those permission."
+"AwsSolutions-L1","PrimeDeals-Migration/MigrationHandler/Resource","Suppressed","Node.js 20 is the latest LTS runtime supported by Lambda at time of implementation","Error","The non-container Lambda function is not configured to use the latest runtime version."

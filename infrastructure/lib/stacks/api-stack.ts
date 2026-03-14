@@ -86,21 +86,20 @@ export class ApiStack extends cdk.Stack {
         DB_NAME: 'primedealauto',
         SECRET_ARN: props.dbSecret.secretArn,
         S3_BUCKET: props.bucket.bucketName,
-        // TEMPORARY: Use S3 URL if CloudFront not available (account verification pending)
-        CLOUDFRONT_URL: props.distribution 
-          ? `https://${props.distribution.distributionDomainName}`
-          : `https://${props.bucket.bucketRegionalDomainName}`,
+        // CloudFront domain for serving images (uses CloudFront if available, otherwise S3 direct)
+        ...(props.distribution && { CLOUDFRONT_DOMAIN: props.distribution.distributionDomainName }),
         FRONTEND_URL: process.env.FRONTEND_URL || '*',
         // OpenSearch endpoint - import from SearchStack export if available
         ...(props.opensearchEndpoint && { OPENSEARCH_ENDPOINT: props.opensearchEndpoint }),
-        // Bedrock configuration for AI Chat Assistant
-        BEDROCK_MODEL_ID: 'anthropic.claude-sonnet-4-20250514-v1:0',
-        BEDROCK_REGION: 'us-east-1',
       },
       bundling: {
         minify: true,
         sourceMap: true,
-        externalModules: ['@aws-sdk/client-secrets-manager', '@aws-sdk/client-s3'],
+        externalModules: [
+          '@aws-sdk/client-secrets-manager',
+          '@aws-sdk/client-s3',
+          '@aws-sdk/s3-request-presigner',
+        ],
       },
     });
 
@@ -200,9 +199,10 @@ export class ApiStack extends cdk.Stack {
       environment: {
         VPC_PROXY_FUNCTION_NAME: vpcProxyLambda.functionName,
         FRONTEND_URL: process.env.FRONTEND_URL || '*',
-        // TEMPORARY: Using Claude 3.5 Sonnet v2 until Claude Sonnet 4 access is granted via AWS Support
-        // TARGET: anthropic.claude-sonnet-4-20250514-v1:0 (requires support case for new accounts)
-        BEDROCK_MODEL_ID: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+        // Using Amazon Nova Pro for best quality
+        // If hitting daily token limits, request quota increase via AWS Support
+        // Claude Sonnet 4 requires Anthropic use case form (not yet approved)
+        BEDROCK_MODEL_ID: 'amazon.nova-pro-v1:0',
         BEDROCK_REGION: 'us-east-1',
       },
       bundling: {
@@ -240,10 +240,8 @@ export class ApiStack extends cdk.Stack {
         effect: iam.Effect.ALLOW,
         actions: ['bedrock:InvokeModel'],
         resources: [
-          // TEMPORARY: Using Claude 3.5 Sonnet until Claude Sonnet 4 model access is granted
-          `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0`,
-          // TODO: Add Claude Sonnet 4 after requesting model access
-          // `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0`,
+          // Amazon Nova Pro (best quality)
+          `arn:aws:bedrock:${this.region}::foundation-model/amazon.nova-pro-v1:0`,
         ],
       })
     );

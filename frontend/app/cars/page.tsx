@@ -1,63 +1,138 @@
-// Car Listing Page - Server Component with pagination
-// Displays all cars with pagination controls
+// Car Listing Page - Server Component with search, filters, and pagination
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getCars } from '@/lib/api/cars';
-import { CarCard } from '@/components/cars/CarCard';
-import { Pagination } from '@/components/ui/Pagination';
+import { searchCars, getSearchFacets } from '@/lib/api/search';
+import type { SearchParams } from '@/lib/api/search';
 import { RetryButton } from '@/components/ui/RetryButton';
+import { CarsPageClient } from '@/components/cars/CarsPageClient';
 
-// Page metadata
 export const metadata: Metadata = {
   title: 'Browse Cars',
-  description: 'Browse our complete inventory of quality used and new vehicles at Prime Deal Auto.',
+  description:
+    'Browse our complete inventory of quality used and new vehicles at Prime Deal Auto.',
 };
 
 interface CarsPageProps {
   searchParams: Promise<{
     page?: string;
+    q?: string;
+    make?: string;
+    model?: string;
+    variant?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    minYear?: string;
+    maxYear?: string;
+    transmission?: string;
+    fuelType?: string;
+    bodyType?: string;
+    condition?: string;
+    sortBy?: string;
+    sortOrder?: string;
   }>;
 }
 
+function parseNumber(value: string | undefined): number | undefined {
+  if (value === undefined || value === '') return undefined;
+  const n = parseInt(value, 10);
+  return Number.isNaN(n) ? undefined : n;
+}
+
 export default async function CarsPage({ searchParams }: CarsPageProps) {
-  // Parse page from search params (default to 1)
-  const { page } = await searchParams;
-  const currentPage = parseInt(page || '1', 10);
+  const params = await searchParams;
+  const currentPage = parseInt(params.page || '1', 10);
   const limit = 20;
   const offset = (currentPage - 1) * limit;
 
-  let carsData;
-  let error = null;
+  const filters: Partial<SearchParams> = {
+    q: params.q?.trim() || undefined,
+    make: params.make || undefined,
+    model: params.model || undefined,
+    variant: params.variant || undefined,
+    minPrice: parseNumber(params.minPrice),
+    maxPrice: parseNumber(params.maxPrice),
+    minYear: parseNumber(params.minYear),
+    maxYear: parseNumber(params.maxYear),
+    transmission:
+      params.transmission === 'automatic' ||
+      params.transmission === 'manual' ||
+      params.transmission === 'cvt'
+        ? params.transmission
+        : undefined,
+    fuelType:
+      params.fuelType === 'petrol' ||
+      params.fuelType === 'diesel' ||
+      params.fuelType === 'electric' ||
+      params.fuelType === 'hybrid'
+        ? params.fuelType
+        : undefined,
+    bodyType: params.bodyType || undefined,
+    condition:
+      params.condition === 'excellent' ||
+      params.condition === 'good' ||
+      params.condition === 'fair' ||
+      params.condition === 'poor'
+        ? params.condition
+        : undefined,
+    sortBy:
+      params.sortBy === 'price' ||
+      params.sortBy === 'year' ||
+      params.sortBy === 'mileage' ||
+      params.sortBy === 'relevance'
+        ? params.sortBy
+        : undefined,
+    sortOrder: params.sortOrder === 'asc' || params.sortOrder === 'desc' ? params.sortOrder : undefined,
+  };
+
+  let carsData: Awaited<ReturnType<typeof searchCars>> | undefined;
+  let facetsData: Awaited<ReturnType<typeof getSearchFacets>> = {};
+  let error: string | null = null;
 
   try {
-    // Fetch cars from API with pagination
-    carsData = await getCars({ limit, offset });
+    [carsData, facetsData] = await Promise.all([
+      searchCars({
+        ...filters,
+        limit,
+        offset,
+      }),
+      getSearchFacets(filters),
+    ]);
   } catch (err) {
-    console.error('Failed to fetch cars:', err);
+    console.error('Failed to fetch cars or facets:', err);
     error = err instanceof Error ? err.message : 'Failed to load cars';
   }
 
-  // Calculate pagination info
   const totalPages = carsData ? Math.ceil(carsData.total / limit) : 0;
   const hasMore = carsData ? carsData.hasMore : false;
 
   return (
-    <div className="min-h-screen bg-[#F9FBFC]">
+    <div className="min-h-screen bg-[#F9FBFC] rounded-t-[80px]">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Page Header */}
+        {/* Breadcrumb */}
+        <nav className="mb-2" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-1 text-[15px] leading-[26px]">
+            <li>
+              <Link href="/" className="text-secondary hover:underline">
+                Home
+              </Link>
+            </li>
+            <li className="text-primary/60" aria-hidden>
+              /
+            </li>
+            <li>
+              <Link href="/cars" className="text-secondary hover:underline">
+                Cars for Sale
+              </Link>
+            </li>
+          </ol>
+        </nav>
         <div className="mb-8">
           <h1 className="text-[40px] leading-[45px] font-bold text-primary mb-4">
-            Browse Our Cars
+            New and Used Cars For Sale
           </h1>
-          {carsData && (
-            <p className="text-[16px] leading-[28px] text-gray-600">
-              Showing {offset + 1}-{Math.min(offset + limit, carsData.total)} of {carsData.total} cars
-            </p>
-          )}
         </div>
 
-        {/* Error State */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-[16px] p-8 text-center">
             <p className="text-red-600 text-lg mb-4">{error}</p>
@@ -65,57 +140,18 @@ export default async function CarsPage({ searchParams }: CarsPageProps) {
           </div>
         )}
 
-        {/* Cars Grid */}
-        {carsData && carsData.data.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-              {carsData.data.map((car) => (
-                <CarCard key={car.id} car={car} />
-              ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                hasMore={hasMore}
-              />
-            )}
-          </>
-        )}
-
-        {/* Empty State */}
-        {carsData && carsData.data.length === 0 && (
-          <div className="text-center py-20">
-            <div className="bg-white rounded-[16px] p-12 shadow-[0px_2px_8px_rgba(0,0,0,0.08)]">
-              <svg
-                className="w-24 h-24 mx-auto mb-6 text-gray-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                />
-              </svg>
-              <h2 className="text-[30px] leading-[45px] font-bold text-primary mb-4">
-                No Cars Found
-              </h2>
-              <p className="text-[16px] leading-[28px] text-gray-600 mb-6">
-                We don't have any cars available at the moment. Check back soon for new arrivals!
-              </p>
-              <Link
-                href="/"
-                className="inline-block bg-secondary text-white px-8 py-4 rounded-[12px] text-[15px] leading-[26px] font-medium hover:bg-secondary/90 transition-colors"
-              >
-                Back to Home
-              </Link>
-            </div>
-          </div>
+        {!error && (
+          <CarsPageClient
+            filters={filters}
+            facets={facetsData}
+            carsData={carsData}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            hasMore={hasMore}
+            total={carsData?.total ?? 0}
+            limit={limit}
+            offset={offset}
+          />
         )}
       </div>
     </div>

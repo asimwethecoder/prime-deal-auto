@@ -1,0 +1,325 @@
+{
+ "Resources": {
+  "MigrationLambdaSGE0680C31": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for migration Lambda",
+    "SecurityGroupEgress": [
+     {
+      "Description": "Allow outbound to RDS Proxy",
+      "DestinationSecurityGroupId": {
+       "Fn::ImportValue": "PrimeDeals-Database-ProxySecurityGroupId"
+      },
+      "FromPort": 5432,
+      "IpProtocol": "tcp",
+      "ToPort": 5432
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow HTTPS outbound for Secrets Manager",
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefVpc8378EB38272D6E3A"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Migration/MigrationLambdaSG/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "HTTPS egress to 0.0.0.0/0 required for Secrets Manager VPC endpoint access",
+       "id": "AwsSolutions-EC23"
+      }
+     ]
+    }
+   }
+  },
+  "AllowMigrationLambdaToRdsProxy": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow migration Lambda to connect to RDS Proxy",
+    "FromPort": 5432,
+    "GroupId": {
+     "Fn::ImportValue": "PrimeDeals-Database-ProxySecurityGroupId"
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "MigrationLambdaSGE0680C31",
+      "GroupId"
+     ]
+    },
+    "ToPort": 5432
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Migration/AllowMigrationLambdaToRdsProxy"
+   }
+  },
+  "MigrationHandlerServiceRole21066550": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Migration/MigrationHandler/ServiceRole/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWSLambdaBasicExecutionRole and AWSLambdaVPCAccessExecutionRole managed policies required for VPC-attached Lambda",
+       "id": "AwsSolutions-IAM4"
+      },
+      {
+       "reason": "Node.js 20 is the latest LTS runtime supported by Lambda at time of implementation",
+       "id": "AwsSolutions-L1"
+      }
+     ]
+    }
+   }
+  },
+  "MigrationHandlerServiceRoleDefaultPolicy1A46B34C": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefAuroraClusterSecretAttachmentDB8032DAFDEEBE73"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "MigrationHandlerServiceRoleDefaultPolicy1A46B34C",
+    "Roles": [
+     {
+      "Ref": "MigrationHandlerServiceRole21066550"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Migration/MigrationHandler/ServiceRole/DefaultPolicy/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWSLambdaBasicExecutionRole and AWSLambdaVPCAccessExecutionRole managed policies required for VPC-attached Lambda",
+       "id": "AwsSolutions-IAM4"
+      },
+      {
+       "reason": "Node.js 20 is the latest LTS runtime supported by Lambda at time of implementation",
+       "id": "AwsSolutions-L1"
+      }
+     ]
+    }
+   }
+  },
+  "MigrationHandler99E8E61C": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-141814481613-us-east-1",
+     "S3Key": "ec5721a6a4eb4a165ffd26759275f47a668772306d9c9c80a89f64b005f4cf77.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "DB_HOST": {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputFnGetAttRdsProxyE8EC09E1EndpointD77E918E"
+      },
+      "DB_NAME": "primedealauto",
+      "SECRET_ARN": {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefAuroraClusterSecretAttachmentDB8032DAFDEEBE73"
+      }
+     }
+    },
+    "Handler": "index.handler",
+    "MemorySize": 512,
+    "Role": {
+     "Fn::GetAtt": [
+      "MigrationHandlerServiceRole21066550",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "Timeout": 300,
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "MigrationLambdaSGE0680C31",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefVpcisolatedSubnet1SubnetE62B1B9BEE029908"
+      },
+      {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefVpcisolatedSubnet2Subnet392170557C27A199"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "MigrationHandlerServiceRoleDefaultPolicy1A46B34C",
+    "MigrationHandlerServiceRole21066550"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Migration/MigrationHandler/Resource",
+    "aws:asset:path": "asset.ec5721a6a4eb4a165ffd26759275f47a668772306d9c9c80a89f64b005f4cf77",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWSLambdaBasicExecutionRole and AWSLambdaVPCAccessExecutionRole managed policies required for VPC-attached Lambda",
+       "id": "AwsSolutions-IAM4"
+      },
+      {
+       "reason": "Node.js 20 is the latest LTS runtime supported by Lambda at time of implementation",
+       "id": "AwsSolutions-L1"
+      }
+     ]
+    }
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/32OTW7CQAxGz8J+4qYDFyhIVGxolRwgMhMTOT8zKPYQoSh3RxPaLav32fL3ZAt2l0O+wUkyV3dZzxeYS0XXGZykmslZmEtycWR9fI8h3szh6t8vTr4ZSWQxPQ6XGisfamoFziuO0Tvl4A3jAHMRekr9lb+hZ/dI4ystRrYVipAKfCUY2cI+uo50j0J/ejhc/b90Metdqdiwb5LpJ+ot6mLSD9DKx93u4NNCvmmFORujVx4Iihef9XZ6FA0BAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Migration/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "MigrationFunctionName": {
+   "Description": "Migration Lambda function name",
+   "Value": {
+    "Ref": "MigrationHandler99E8E61C"
+   }
+  },
+  "MigrationFunctionArn": {
+   "Description": "Migration Lambda function ARN",
+   "Value": {
+    "Fn::GetAtt": [
+     "MigrationHandler99E8E61C",
+     "Arn"
+    ]
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

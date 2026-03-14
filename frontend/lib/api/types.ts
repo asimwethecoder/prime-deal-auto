@@ -8,6 +8,7 @@ export interface Car {
   id: string;
   make: string;
   model: string;
+  variant?: string;
   year: number;
   price: number; // ZAR
   mileage: number; // km
@@ -21,6 +22,8 @@ export interface Car {
   status: 'active' | 'sold' | 'pending' | 'deleted';
   created_at: string;
   updated_at: string;
+  /** Present when returned from list endpoint (e.g. dashboard) */
+  views_count?: number;
 }
 
 /**
@@ -85,6 +88,26 @@ export class ApiError extends Error {
 }
 
 /**
+ * Request body for creating a car (POST /cars)
+ */
+export interface CreateCarRequest {
+  make: string;
+  model: string;
+  variant?: string;
+  year: number;
+  price: number;
+  mileage: number;
+  condition: Car['condition'];
+  body_type?: string;
+  transmission: Car['transmission'];
+  fuel_type: Car['fuel_type'];
+  color?: string;
+  description?: string;
+  features?: string[];
+  status?: Car['status'];
+}
+
+/**
  * Query parameters for car listing
  */
 export interface CarListParams {
@@ -100,7 +123,7 @@ export interface CarListParams {
   transmission?: Car['transmission'];
   fuelType?: Car['fuel_type'];
   bodyType?: string;
-  sortBy?: 'price' | 'year' | 'mileage' | 'createdAt';
+  sortBy?: 'price' | 'year' | 'mileage' | 'createdAt' | 'created_at';
   sortOrder?: 'asc' | 'desc';
 }
 

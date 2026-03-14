@@ -1,36 +1,41 @@
 'use client';
 
 // Header Component - Site-wide navigation
-// Transparent over hero, solid navy on scroll. Logo: Prime Deal Auto.
+// Home: transparent over hero, solid primary on scroll. Other pages: always solid primary (#050B20) with white text.
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 
 const SCROLL_THRESHOLD = 10;
 
 export function Header() {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  const isHomePage = pathname === '/';
+  const isTransparent = isHomePage && !scrolled;
+
   useEffect(() => {
+    if (!isHomePage) return;
     const handleScroll = () => setScrolled(window.scrollY > SCROLL_THRESHOLD);
-    handleScroll(); // init in case of scroll restore
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isHomePage]);
 
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  const isTransparent = !scrolled;
   const navLinkClass = isTransparent
     ? 'text-white hover:text-white/90 transition-colors font-medium text-[15px]'
-    : 'text-primary hover:text-secondary transition-colors font-medium text-[15px]';
+    : 'text-white hover:text-white/90 transition-colors font-medium text-[15px]';
   const searchPillClass = isTransparent
     ? 'flex items-center gap-2 text-white/90 hover:text-white text-sm border border-white/30 rounded-full pl-3 pr-4 py-2 min-w-[200px] bg-white/5'
-    : 'flex items-center gap-2 text-primary/70 hover:text-primary text-sm border border-border rounded-full pl-3 pr-4 py-2 min-w-[200px]';
+    : 'flex items-center gap-2 text-white/90 hover:text-white text-sm border border-white/30 rounded-full pl-3 pr-4 py-2 min-w-[200px] bg-white/5';
   const logoClass = 'flex items-center hover:opacity-90 transition-opacity';
 
   return (
@@ -38,7 +43,7 @@ export function Header() {
       className={`z-[100] transition-colors duration-300 ${
         isTransparent
           ? 'absolute top-0 left-0 right-0 bg-transparent'
-          : 'sticky top-0 bg-primary border-b border-primary'
+          : 'sticky top-0 left-0 right-0 bg-primary border-b border-primary'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -50,14 +55,18 @@ export function Header() {
               className={logoClass}
               aria-label="Prime Deal Auto Home"
             >
-              <Image
-                src="/logo/primedealautologo.jpeg"
-                alt="Prime Deal Auto"
-                width={120}
-                height={40}
-                priority
-                className={`h-10 w-auto rounded-lg ${!isTransparent ? 'brightness-0 invert' : ''}`}
-              />
+              <span
+                className={`inline-flex items-center justify-center rounded-lg overflow-hidden ${!isTransparent ? 'bg-white px-2 py-1.5' : ''}`}
+              >
+                <Image
+                  src="/logo/primedealautologo.jpeg"
+                  alt="Prime Deal Auto"
+                  width={120}
+                  height={40}
+                  priority
+                  className="h-10 w-auto rounded-lg max-h-10 object-contain"
+                />
+              </span>
             </Link>
             <Link
               href="/cars"
@@ -67,7 +76,7 @@ export function Header() {
                 src="search-alt-2-svgrepo-com.svg"
                 width={16}
                 height={16}
-                className={isTransparent ? 'invert shrink-0' : 'shrink-0'}
+                className="invert shrink-0"
                 aria-hidden
               />
               <span className="truncate">Search Cars eg. Audi Q7</span>
@@ -91,17 +100,20 @@ export function Header() {
               </Link>
             </nav>
             <Link
-              href="/signin"
+              href="/login"
               className={`flex items-center gap-2 ${navLinkClass}`}
             >
               <Icon
                 src="signin-svgrepo-com.svg"
                 width={18}
                 height={18}
-                className={isTransparent ? 'invert shrink-0' : 'shrink-0'}
+                className="invert shrink-0"
                 aria-hidden
               />
               Sign In
+            </Link>
+            <Link href="/register" className={navLinkClass}>
+              Register
             </Link>
             <Link
               href="/ad-listing"
@@ -111,20 +123,18 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Button - min 44px touch target */}
           <button
             type="button"
-            className={`lg:hidden p-2 rounded-md transition-colors ${
-              isTransparent ? 'text-white hover:bg-white/10' : 'text-primary hover:bg-bg-1'
-            }`}
+            className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-md transition-colors text-white hover:bg-white/10"
             onClick={toggleMobileMenu}
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? (
-              <Icon src="close-square-svgrepo-com.svg" width={24} height={24} className={isTransparent ? 'invert' : ''} aria-hidden />
+              <Icon src="close-square-svgrepo-com.svg" width={24} height={24} className="invert" aria-hidden />
             ) : (
-              <Icon src="hamburger-menu-svgrepo-com.svg" width={24} height={24} className={isTransparent ? 'invert' : ''} aria-hidden />
+              <Icon src="hamburger-menu-svgrepo-com.svg" width={24} height={24} className="invert" aria-hidden />
             )}
           </button>
         </div>
@@ -132,30 +142,33 @@ export function Header() {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <nav
-            className="lg:hidden py-4 border-t border-border"
+            className="lg:hidden py-4 border-t border-white/20"
             role="navigation"
             aria-label="Mobile navigation"
           >
-            <div className="flex flex-col space-y-4">
-              <Link href="/" className="text-primary hover:text-secondary transition-colors font-medium py-2" onClick={closeMobileMenu}>
+            <div className="flex flex-col">
+              <Link href="/" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
                 Home
               </Link>
-              <Link href="/about" className="text-primary hover:text-secondary transition-colors font-medium py-2" onClick={closeMobileMenu}>
+              <Link href="/about" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
                 About
               </Link>
-              <Link href="/cars" className="text-primary hover:text-secondary transition-colors font-medium py-2" onClick={closeMobileMenu}>
+              <Link href="/cars" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
                 Cars
               </Link>
-              <Link href="/contact" className="text-primary hover:text-secondary transition-colors font-medium py-2" onClick={closeMobileMenu}>
+              <Link href="/contact" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
                 Contact
               </Link>
-              <Link href="/signin" className="text-primary hover:text-secondary transition-colors font-medium py-2 flex items-center gap-2" onClick={closeMobileMenu}>
-                <Icon src="signin-svgrepo-com.svg" width={18} height={18} aria-hidden />
+              <Link href="/login" className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+                <Icon src="signin-svgrepo-com.svg" width={18} height={18} className="invert" aria-hidden />
                 Sign In
+              </Link>
+              <Link href="/register" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+                Register
               </Link>
               <Link
                 href="/ad-listing"
-                className="bg-white text-primary px-6 py-3 rounded-full text-[15px] font-medium hover:bg-white/90 transition-colors text-center"
+                className="min-h-[44px] flex items-center justify-center bg-white text-primary px-6 py-3 rounded-full text-[15px] font-medium hover:bg-white/90 transition-colors mt-2"
                 onClick={closeMobileMenu}
               >
                 Add Listing

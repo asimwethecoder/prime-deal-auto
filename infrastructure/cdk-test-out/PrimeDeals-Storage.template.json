@@ -1,0 +1,553 @@
+{
+ "Resources": {
+  "CarImagesBucket930996DC": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "CorsConfiguration": {
+     "CorsRules": [
+      {
+       "AllowedHeaders": [
+        "*"
+       ],
+       "AllowedMethods": [
+        "PUT",
+        "GET"
+       ],
+       "AllowedOrigins": [
+        "http://localhost:3000",
+        "https://primedealauto.co.za"
+       ],
+       "MaxAge": 3000
+      }
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+       },
+       "Id": "DeleteIncompleteMultipartUploads",
+       "Status": "Enabled"
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "aws-cdk:auto-delete-objects",
+      "Value": "true"
+     },
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Storage/CarImagesBucket/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "S3 access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-S1"
+      },
+      {
+       "reason": "Public access blocked - CloudFront OAC handles all access control",
+       "id": "AwsSolutions-S2"
+      }
+     ]
+    }
+   }
+  },
+  "CarImagesBucketPolicyB006D147": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "CarImagesBucket930996DC"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "CarImagesBucket930996DC",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "CarImagesBucket930996DC",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:PutBucketPolicy",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+          "Arn"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "CarImagesBucket930996DC",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "CarImagesBucket930996DC",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "s3:GetObject",
+       "Condition": {
+        "StringEquals": {
+         "AWS:SourceArn": {
+          "Fn::Join": [
+           "",
+           [
+            "arn:",
+            {
+             "Ref": "AWS::Partition"
+            },
+            ":cloudfront::",
+            {
+             "Ref": "AWS::AccountId"
+            },
+            ":distribution/",
+            {
+             "Ref": "Distribution830FAC52"
+            }
+           ]
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "CarImagesBucket930996DC",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "s3:GetObject",
+       "Condition": {
+        "StringEquals": {
+         "AWS:SourceArn": {
+          "Fn::Join": [
+           "",
+           [
+            "arn:aws:cloudfront::141814481613:distribution/",
+            {
+             "Ref": "Distribution830FAC52"
+            }
+           ]
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "CarImagesBucket930996DC",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Storage/CarImagesBucket/Policy/Resource"
+   }
+  },
+  "CarImagesBucketAutoDeleteObjectsCustomResource538161A2": {
+   "Type": "Custom::S3AutoDeleteObjects",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+      "Arn"
+     ]
+    },
+    "BucketName": {
+     "Ref": "CarImagesBucket930996DC"
+    }
+   },
+   "DependsOn": [
+    "CarImagesBucketPolicyB006D147"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Storage/CarImagesBucket/AutoDeleteObjectsCustomResource/Default"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ]
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Storage/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-141814481613-us-east-1",
+     "S3Key": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip"
+    },
+    "Timeout": 900,
+    "MemorySize": 128,
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Description": {
+     "Fn::Join": [
+      "",
+      [
+       "Lambda function for auto-deleting objects in ",
+       {
+        "Ref": "CarImagesBucket930996DC"
+       },
+       " S3 bucket."
+      ]
+     ]
+    }
+   },
+   "DependsOn": [
+    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Storage/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler",
+    "aws:asset:path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+    "aws:asset:property": "Code"
+   }
+  },
+  "OAC5B452445": {
+   "Type": "AWS::CloudFront::OriginAccessControl",
+   "Properties": {
+    "OriginAccessControlConfig": {
+     "Name": "PrimeDealsStorageOAC3CB4F250",
+     "OriginAccessControlOriginType": "s3",
+     "SigningBehavior": "always",
+     "SigningProtocol": "sigv4"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Storage/OAC/Resource"
+   }
+  },
+  "Distribution830FAC52": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "DefaultCacheBehavior": {
+      "AllowedMethods": [
+       "GET",
+       "HEAD"
+      ],
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "CachedMethods": [
+       "GET",
+       "HEAD"
+      ],
+      "Compress": true,
+      "ResponseHeadersPolicyId": "60669652-455b-4ae9-85a4-c4c02393f86c",
+      "TargetOriginId": "PrimeDealsStorageDistributionOrigin135E6CB3E",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "Enabled": true,
+     "HttpVersion": "http2",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "DomainName": {
+        "Fn::GetAtt": [
+         "CarImagesBucket930996DC",
+         "RegionalDomainName"
+        ]
+       },
+       "Id": "PrimeDealsStorageDistributionOrigin135E6CB3E",
+       "OriginAccessControlId": {
+        "Fn::GetAtt": [
+         "OAC5B452445",
+         "Id"
+        ]
+       },
+       "S3OriginConfig": {
+        "OriginAccessIdentity": ""
+       }
+      }
+     ],
+     "PriceClass": "PriceClass_100"
+    },
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Storage/Distribution/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Geo restrictions not required for car dealership serving South Africa",
+       "id": "AwsSolutions-CFR1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-CFR2"
+      },
+      {
+       "reason": "CloudFront access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-CFR3"
+      },
+      {
+       "reason": "Custom SSL certificate deferred - using CloudFront default certificate for dev",
+       "id": "AwsSolutions-CFR4"
+      }
+     ]
+    }
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/21NXQqCQBA+S+/rZOYFyt6TPECs6ySTthM7s0WIdw8zqKCn758vgyxPIV3YuySu6ZKeahgqta4z9i7HQdYwbKPrUE1x8m82Q8k9ucfHnvVoXM+xOQX2CkO13gdqyW+cQ5GCvQbup8k/e0eigeqoxH7qfOtxNEUU5csBhWNwOBU+/CcqA9+owbC1gmYjglqpbcm3r+Oo16ij8dwgnGV5y3JYZZAuzkKUhOiVLgiHGZ9fbfV+HgEAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Storage/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "BucketName": {
+   "Value": {
+    "Ref": "CarImagesBucket930996DC"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Storage-BucketName"
+   }
+  },
+  "BucketArn": {
+   "Value": {
+    "Fn::GetAtt": [
+     "CarImagesBucket930996DC",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Storage-BucketArn"
+   }
+  },
+  "BucketRegionalDomainName": {
+   "Value": {
+    "Fn::GetAtt": [
+     "CarImagesBucket930996DC",
+     "RegionalDomainName"
+    ]
+   }
+  },
+  "DistributionId": {
+   "Value": {
+    "Ref": "Distribution830FAC52"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Storage-DistributionId"
+   }
+  },
+  "DistributionDomainName": {
+   "Value": {
+    "Fn::GetAtt": [
+     "Distribution830FAC52",
+     "DomainName"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Storage-DistributionDomainName"
+   }
+  },
+  "ExportsOutputFnGetAttCarImagesBucket930996DCArn085DB008": {
+   "Value": {
+    "Fn::GetAtt": [
+     "CarImagesBucket930996DC",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Storage:ExportsOutputFnGetAttCarImagesBucket930996DCArn085DB008"
+   }
+  },
+  "ExportsOutputRefCarImagesBucket930996DC5F1B28DB": {
+   "Value": {
+    "Ref": "CarImagesBucket930996DC"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Storage:ExportsOutputRefCarImagesBucket930996DC5F1B28DB"
+   }
+  },
+  "ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30": {
+   "Value": {
+    "Fn::GetAtt": [
+     "Distribution830FAC52",
+     "DomainName"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Storage:ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

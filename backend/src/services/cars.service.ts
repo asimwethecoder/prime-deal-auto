@@ -1,5 +1,22 @@
-import { CarRepository, CarFilters } from '../repositories/cars.repository';
+import { CarRepository, CarFilters, CreateCarData } from '../repositories/cars.repository';
 import { Car } from '../types';
+
+export interface CreateCarInput {
+  make: string;
+  model: string;
+  variant?: string;
+  year: number;
+  price: number;
+  mileage: number;
+  condition: 'excellent' | 'good' | 'fair' | 'poor';
+  body_type?: string;
+  transmission: 'automatic' | 'manual' | 'cvt';
+  fuel_type: 'petrol' | 'diesel' | 'electric' | 'hybrid';
+  color?: string;
+  description?: string;
+  features?: string[];
+  status?: 'active' | 'pending' | 'sold' | 'deleted';
+}
 
 export interface ListCarsInput {
   make?: string;
@@ -60,5 +77,50 @@ export class CarService {
 
   async getCarById(id: string): Promise<Car | null> {
     return this.repository.findById(id);
+  }
+
+  async createCar(input: CreateCarInput): Promise<Car> {
+    const data: CreateCarData = {
+      make: input.make,
+      model: input.model,
+      variant: input.variant,
+      year: input.year,
+      price: input.price,
+      mileage: input.mileage,
+      condition: input.condition,
+      body_type: input.body_type,
+      transmission: input.transmission,
+      fuel_type: input.fuel_type,
+      color: input.color,
+      description: input.description,
+      features: input.features,
+      status: input.status ?? 'active',
+    };
+    return this.repository.create(data);
+  }
+
+  async updateCar(id: string, input: Partial<CreateCarInput>): Promise<Car | null> {
+    const data: Partial<CreateCarData> = {};
+    
+    if (input.make !== undefined) data.make = input.make;
+    if (input.model !== undefined) data.model = input.model;
+    if (input.variant !== undefined) data.variant = input.variant;
+    if (input.year !== undefined) data.year = input.year;
+    if (input.price !== undefined) data.price = input.price;
+    if (input.mileage !== undefined) data.mileage = input.mileage;
+    if (input.condition !== undefined) data.condition = input.condition;
+    if (input.body_type !== undefined) data.body_type = input.body_type;
+    if (input.transmission !== undefined) data.transmission = input.transmission;
+    if (input.fuel_type !== undefined) data.fuel_type = input.fuel_type;
+    if (input.color !== undefined) data.color = input.color;
+    if (input.description !== undefined) data.description = input.description;
+    if (input.features !== undefined) data.features = input.features;
+    if (input.status !== undefined) data.status = input.status;
+
+    return this.repository.update(id, data);
+  }
+
+  async deleteCar(id: string): Promise<boolean> {
+    return this.repository.softDelete(id);
   }
 }

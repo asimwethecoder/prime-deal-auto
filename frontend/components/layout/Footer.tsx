@@ -8,7 +8,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-primary bg-[#050B20] text-white rounded-t-[80px] mt-20">
+    <footer className="bg-primary bg-[#050B20] text-white rounded-t-[40px] md:rounded-t-[80px] mt-20">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         {/* Newsletter block */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
@@ -116,7 +116,7 @@ export function Footer() {
             </div>
             <h3 className="text-[20px] leading-[30px] font-medium text-white mb-4">Connect With Us</h3>
             <div className="flex gap-3">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Facebook">
+              <a href="https://www.facebook.com/profile.php?id=61567384738083" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Facebook">
                 <Icon src="facebook-svgrepo-com.svg" width={16} height={16} className="invert" aria-hidden />
               </a>
               <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Twitter">

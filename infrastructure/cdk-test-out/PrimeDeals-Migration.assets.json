@@ -1,0 +1,36 @@
+{
+  "version": "50.0.0",
+  "files": {
+    "ec5721a6a4eb4a165ffd26759275f47a668772306d9c9c80a89f64b005f4cf77": {
+      "displayName": "MigrationHandler/Code",
+      "source": {
+        "path": "asset.ec5721a6a4eb4a165ffd26759275f47a668772306d9c9c80a89f64b005f4cf77",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "141814481613-us-east-1-2395f5d2": {
+          "bucketName": "cdk-hnb659fds-assets-141814481613-us-east-1",
+          "objectKey": "ec5721a6a4eb4a165ffd26759275f47a668772306d9c9c80a89f64b005f4cf77.zip",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::141814481613:role/cdk-hnb659fds-file-publishing-role-141814481613-us-east-1"
+        }
+      }
+    },
+    "b5bd166bd04f9d3564989e24080b661902deff3d71af8ac5ed840e3b57bab61b": {
+      "displayName": "PrimeDeals-Migration Template",
+      "source": {
+        "path": "PrimeDeals-Migration.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "141814481613-us-east-1-177bef27": {
+          "bucketName": "cdk-hnb659fds-assets-141814481613-us-east-1",
+          "objectKey": "b5bd166bd04f9d3564989e24080b661902deff3d71af8ac5ed840e3b57bab61b.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::141814481613:role/cdk-hnb659fds-file-publishing-role-141814481613-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

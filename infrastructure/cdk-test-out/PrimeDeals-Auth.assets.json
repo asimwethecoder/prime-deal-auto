@@ -1,0 +1,36 @@
+{
+  "version": "50.0.0",
+  "files": {
+    "150d0a8f88ac7815aa8da8ea474ac8c108b371b56707677ee5d644dcd39c4e56": {
+      "displayName": "PostConfirmationTrigger/Code",
+      "source": {
+        "path": "asset.150d0a8f88ac7815aa8da8ea474ac8c108b371b56707677ee5d644dcd39c4e56",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "141814481613-us-east-1-e407a6f6": {
+          "bucketName": "cdk-hnb659fds-assets-141814481613-us-east-1",
+          "objectKey": "150d0a8f88ac7815aa8da8ea474ac8c108b371b56707677ee5d644dcd39c4e56.zip",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::141814481613:role/cdk-hnb659fds-file-publishing-role-141814481613-us-east-1"
+        }
+      }
+    },
+    "a7d83255d5cc0d719ef3c91ca7dfe17d06efb80399a3218d473c2059b55608b4": {
+      "displayName": "PrimeDeals-Auth Template",
+      "source": {
+        "path": "PrimeDeals-Auth.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "141814481613-us-east-1-2986dae6": {
+          "bucketName": "cdk-hnb659fds-assets-141814481613-us-east-1",
+          "objectKey": "a7d83255d5cc0d719ef3c91ca7dfe17d06efb80399a3218d473c2059b55608b4.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::141814481613:role/cdk-hnb659fds-file-publishing-role-141814481613-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

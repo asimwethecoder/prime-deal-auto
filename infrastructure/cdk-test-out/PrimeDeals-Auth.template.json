@@ -1,0 +1,348 @@
+{
+ "Metadata": {
+  "cdk_nag": {
+   "rules_to_suppress": [
+    {
+     "reason": "TUZBIG5vdCByZXF1aXJlZCBmb3IgZGV2IGVudmlyb25tZW50IOKAlCBkZWZlcnJlZCB0byBwcm9kdWN0aW9uIGhhcmRlbmluZyBwaGFzZSAoU3BlYyAxNCk=",
+     "id": "AwsSolutions-COG2",
+     "is_reason_encoded": true
+    },
+    {
+     "reason": "AWSLambdaBasicExecutionRole managed policy is appropriate for the post-confirmation stub Lambda which only logs events",
+     "id": "AwsSolutions-IAM4"
+    },
+    {
+     "reason": "Node.js 20 is the latest LTS runtime supported by Lambda at time of implementation",
+     "id": "AwsSolutions-L1"
+    }
+   ]
+  }
+ },
+ "Resources": {
+  "PostConfirmationTriggerServiceRole4C74C336": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Auth/PostConfirmationTrigger/ServiceRole/Resource"
+   }
+  },
+  "PostConfirmationTriggerB3C0710B": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-141814481613-us-east-1",
+     "S3Key": "150d0a8f88ac7815aa8da8ea474ac8c108b371b56707677ee5d644dcd39c4e56.zip"
+    },
+    "Description": "Cognito post-confirmation trigger — syncs user to Aurora (stub)",
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "PostConfirmationTriggerServiceRole4C74C336",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "DependsOn": [
+    "PostConfirmationTriggerServiceRole4C74C336"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Auth/PostConfirmationTrigger/Resource",
+    "aws:asset:path": "asset.150d0a8f88ac7815aa8da8ea474ac8c108b371b56707677ee5d644dcd39c4e56",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "UserPoolPostConfirmationCognito0E6001F8": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "PostConfirmationTriggerB3C0710B",
+      "Arn"
+     ]
+    },
+    "Principal": "cognito-idp.amazonaws.com",
+    "SourceArn": {
+     "Fn::GetAtt": [
+      "UserPool6BA7E5F2",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Auth/UserPool/PostConfirmationCognito"
+   }
+  },
+  "UserPool6BA7E5F2": {
+   "Type": "AWS::Cognito::UserPool",
+   "Properties": {
+    "AccountRecoverySetting": {
+     "RecoveryMechanisms": [
+      {
+       "Name": "verified_email",
+       "Priority": 1
+      }
+     ]
+    },
+    "AdminCreateUserConfig": {
+     "AllowAdminCreateUserOnly": false
+    },
+    "AutoVerifiedAttributes": [
+     "email"
+    ],
+    "EmailVerificationMessage": "The verification code to your new account is {####}",
+    "EmailVerificationSubject": "Verify your new account",
+    "LambdaConfig": {
+     "PostConfirmation": {
+      "Fn::GetAtt": [
+       "PostConfirmationTriggerB3C0710B",
+       "Arn"
+      ]
+     }
+    },
+    "Policies": {
+     "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireLowercase": true,
+      "RequireNumbers": true,
+      "RequireSymbols": true,
+      "RequireUppercase": true
+     }
+    },
+    "SmsVerificationMessage": "The verification code to your new account is {####}",
+    "UserPoolAddOns": {
+     "AdvancedSecurityMode": "ENFORCED"
+    },
+    "UserPoolTags": {
+     "Environment": "dev",
+     "Project": "PrimeDealAuto"
+    },
+    "UsernameAttributes": [
+     "email"
+    ],
+    "VerificationMessageTemplate": {
+     "DefaultEmailOption": "CONFIRM_WITH_CODE",
+     "EmailMessage": "The verification code to your new account is {####}",
+     "EmailSubject": "Verify your new account",
+     "SmsMessage": "The verification code to your new account is {####}"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Auth/UserPool/Resource"
+   }
+  },
+  "UserPoolClient2F5918F7": {
+   "Type": "AWS::Cognito::UserPoolClient",
+   "Properties": {
+    "AllowedOAuthFlows": [
+     "implicit",
+     "code"
+    ],
+    "AllowedOAuthFlowsUserPoolClient": true,
+    "AllowedOAuthScopes": [
+     "profile",
+     "phone",
+     "email",
+     "openid",
+     "aws.cognito.signin.user.admin"
+    ],
+    "CallbackURLs": [
+     "https://example.com"
+    ],
+    "ExplicitAuthFlows": [
+     "ALLOW_USER_SRP_AUTH",
+     "ALLOW_REFRESH_TOKEN_AUTH"
+    ],
+    "GenerateSecret": false,
+    "SupportedIdentityProviders": [
+     "COGNITO"
+    ],
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Auth/UserPoolClient/Resource"
+   }
+  },
+  "AdminGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "Description": "Administrators — full access to admin panel, car CRUD, lead management",
+    "GroupName": "admin",
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Auth/AdminGroup"
+   }
+  },
+  "DealerGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "Description": "Dealers — placeholder for future dealer-specific features",
+    "GroupName": "dealer",
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Auth/DealerGroup"
+   }
+  },
+  "UserGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "Description": "Regular users — favorites, chat, enquiries",
+    "GroupName": "user",
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Auth/UserGroup"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2WPwWrDMBBEvyX39dZ18gONob2lIaFno8iyWVteBe+qOQj9e1FCQ6GnN8wsw2yDza7GemNuUtl+rjxdMJ3V2BnMTbrkzXLpTcehd5Pg4Y73yFYpMJBZMJ2Cd9AOXJhBtp0RcSr4VgCyxX20s9O9EQePNkztwM+SduCjWxcSocAZbBiZNGD6ErceQ/Dl4Kl/RevJsf6N/jsfa4jXnOE+5KxmJB5L/hn1GjVD+QknefludvjaYL2ZhKhaIystDk8P/gBtYsZDIAEAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Auth/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "UserPoolId": {
+   "Description": "Cognito User Pool ID",
+   "Value": {
+    "Ref": "UserPool6BA7E5F2"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Auth-UserPoolId"
+   }
+  },
+  "UserPoolClientId": {
+   "Description": "Cognito User Pool Client ID",
+   "Value": {
+    "Ref": "UserPoolClient2F5918F7"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Auth-UserPoolClientId"
+   }
+  },
+  "UserPoolArn": {
+   "Description": "Cognito User Pool ARN",
+   "Value": {
+    "Fn::GetAtt": [
+     "UserPool6BA7E5F2",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Auth-UserPoolArn"
+   }
+  },
+  "ExportsOutputFnGetAttUserPool6BA7E5F2Arn686ACC00": {
+   "Value": {
+    "Fn::GetAtt": [
+     "UserPool6BA7E5F2",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Auth:ExportsOutputFnGetAttUserPool6BA7E5F2Arn686ACC00"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

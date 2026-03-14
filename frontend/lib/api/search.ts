@@ -8,11 +8,12 @@ import { CarWithImages, PaginatedResponse } from './types';
  * Search parameters
  */
 export interface SearchParams {
-  q: string; // Search query
+  q?: string;
   limit?: number;
   offset?: number;
   make?: string;
   model?: string;
+  variant?: string;
   minYear?: number;
   maxYear?: number;
   minPrice?: number;
@@ -21,9 +22,12 @@ export interface SearchParams {
   transmission?: 'automatic' | 'manual' | 'cvt';
   fuelType?: 'petrol' | 'diesel' | 'electric' | 'hybrid';
   bodyType?: string;
-  sortBy?: 'price' | 'year' | 'mileage' | 'createdAt' | 'relevance';
+  sortBy?: 'price' | 'year' | 'mileage' | 'relevance';
   sortOrder?: 'asc' | 'desc';
 }
+
+/** Backend returns facets with keys: make, model, variant, body_type, fuel_type, transmission, condition */
+export type FacetResult = Record<string, Array<{ value: string; count: number }>>;
 
 /**
  * Search facet (aggregation result)
@@ -37,16 +41,24 @@ export interface SearchFacet {
 }
 
 /**
- * Search facets response
+ * Get search facets for filtering (with optional current filters for contextual counts)
  */
-export interface SearchFacetsResponse {
-  makes: Array<{ value: string; count: number }>;
-  bodyTypes: Array<{ value: string; count: number }>;
-  fuelTypes: Array<{ value: string; count: number }>;
-  transmissions: Array<{ value: string; count: number }>;
-  conditions: Array<{ value: string; count: number }>;
-  yearRange: { min: number; max: number };
-  priceRange: { min: number; max: number };
+export async function getSearchFacets(
+  filters?: Partial<SearchParams>
+): Promise<FacetResult> {
+  const params: Record<string, string | number | undefined> = {};
+  if (filters?.make) params.make = filters.make;
+  if (filters?.model) params.model = filters.model;
+  if (filters?.variant) params.variant = filters.variant;
+  if (filters?.minPrice != null) params.minPrice = filters.minPrice;
+  if (filters?.maxPrice != null) params.maxPrice = filters.maxPrice;
+  if (filters?.minYear != null) params.minYear = filters.minYear;
+  if (filters?.maxYear != null) params.maxYear = filters.maxYear;
+  if (filters?.bodyType) params.bodyType = filters.bodyType;
+  if (filters?.fuelType) params.fuelType = filters.fuelType;
+  if (filters?.transmission) params.transmission = filters.transmission;
+  if (filters?.condition) params.condition = filters.condition;
+  return get<FacetResult>('/search/facets', params);
 }
 
 /**
@@ -71,16 +83,6 @@ export async function searchCars(
 }
 
 /**
- * Get search facets for filtering
- * Used to populate filter dropdowns with available options and counts
- * 
- * @returns Aggregated facets
- */
-export async function getSearchFacets(): Promise<SearchFacetsResponse> {
-  return get<SearchFacetsResponse>('/search/facets');
-}
-
-/**
  * Get search suggestions for autocomplete
  * 
  * @param query - Partial search query
@@ -92,4 +94,34 @@ export async function getSearchSuggestions(
   field?: 'make' | 'model' | 'bodyType'
 ): Promise<SearchSuggestion[]> {
   return get<SearchSuggestion[]>('/search/suggestions', { q: query, field });
+}
+
+/**
+ * Get models for a specific make
+ * 
+ * @param make - Car make to filter by
+ * @returns List of models for the specified make
+ */
+export async function getModelsForMake(make: string): Promise<SearchSuggestion[]> {
+  return get<SearchSuggestion[]>('/search/suggestions', { 
+    field: 'model', 
+    q: '', 
+    make 
+  });
+}
+
+/**
+ * Get variants for a specific make and model
+ * 
+ * @param make - Car make to filter by
+ * @param model - Car model to filter by
+ * @returns List of variants for the specified make and model
+ */
+export async function getVariantsForModel(make: string, model: string): Promise<SearchSuggestion[]> {
+  return get<SearchSuggestion[]>('/search/suggestions', { 
+    field: 'variant', 
+    q: '', 
+    make,
+    model 
+  });
 }

@@ -17,6 +17,8 @@ export interface Car {
   views_count: number;
   created_at: string;
   updated_at: string;
+  images?: CarImage[];
+  primary_image_url?: string;
 }
 
 export interface User {

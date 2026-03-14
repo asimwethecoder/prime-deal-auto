@@ -46,7 +46,7 @@ export function HeroSearch({ totalCount = 0 }: HeroSearchProps) {
 
   const { data: facets, isLoading: facetsLoading } = useQuery({
     queryKey: ['search-facets'],
-    queryFn: getSearchFacets,
+    queryFn: () => getSearchFacets(),
     staleTime: 60_000,
   });
 
@@ -70,9 +70,9 @@ export function HeroSearch({ totalCount = 0 }: HeroSearchProps) {
 
   const searchButtonText = totalCount > 0 ? `Search ${totalCount} Cars` : 'Search Cars';
 
-  const makeOptions = facets?.makes ?? [];
-  const variantOptions = facets?.bodyTypes ?? [];
-  const priceRange = facets?.priceRange ?? { min: 0, max: 500_000 };
+  const makeOptions = facets?.make ?? [];
+  const variantOptions = facets?.body_type ?? [];
+  const priceRange = { min: 0, max: 500_000 };
   const minPriceOptions = buildPriceOptions(priceRange.min, priceRange.max);
   const maxPriceOptions = buildPriceOptions(priceRange.min, priceRange.max);
 
@@ -117,14 +117,14 @@ export function HeroSearch({ totalCount = 0 }: HeroSearchProps) {
               {facetsLoading ? (
                 <div className="px-4 py-3 text-[15px] text-gray-500">Loading...</div>
               ) : (
-                makeOptions.map(({ value }) => (
+                makeOptions.map((item: { value: string; count: number }) => (
                   <button
-                    key={value}
+                    key={item.value}
                     type="button"
-                    onClick={() => { setMake(value); setOpenDropdown(null); }}
+                    onClick={() => { setMake(item.value); setOpenDropdown(null); }}
                     className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
                   >
-                    {value}
+                    {item.value}
                   </button>
                 ))
               )}
@@ -184,14 +184,14 @@ export function HeroSearch({ totalCount = 0 }: HeroSearchProps) {
               >
                 Any Variants
               </button>
-              {variantOptions.map(({ value }) => (
+              {variantOptions.map((item: { value: string; count: number }) => (
                 <button
-                  key={value}
+                  key={item.value}
                   type="button"
-                  onClick={() => { setVariant(value); setOpenDropdown(null); }}
+                  onClick={() => { setVariant(item.value); setOpenDropdown(null); }}
                   className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
                 >
-                  {value}
+                  {item.value}
                 </button>
               ))}
             </div>

@@ -1,0 +1,5853 @@
+{
+ "Resources": {
+  "LambdaSG9DBFCFB7": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for API Lambda - allows outbound to RDS Proxy and HTTPS",
+    "SecurityGroupEgress": [
+     {
+      "Description": "Allow outbound to RDS Proxy",
+      "DestinationSecurityGroupId": {
+       "Fn::ImportValue": "PrimeDeals-Database-ProxySecurityGroupId"
+      },
+      "FromPort": 5432,
+      "IpProtocol": "tcp",
+      "ToPort": 5432
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow HTTPS outbound for Secrets Manager and S3",
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefVpc8378EB38272D6E3A"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/LambdaSG/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "HTTPS egress to 0.0.0.0/0 required for Secrets Manager VPC endpoint and S3 access",
+       "id": "AwsSolutions-EC23"
+      }
+     ]
+    }
+   }
+  },
+  "AllowLambdaToRdsProxy": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow Lambda to connect to RDS Proxy",
+    "FromPort": 5432,
+    "GroupId": {
+     "Fn::ImportValue": "PrimeDeals-Database-ProxySecurityGroupId"
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "LambdaSG9DBFCFB7",
+      "GroupId"
+     ]
+    },
+    "ToPort": 5432
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/AllowLambdaToRdsProxy"
+   }
+  },
+  "ApiHandlerServiceRole592E70E9": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/ApiHandler/ServiceRole/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWSLambdaVPCAccessExecutionRole managed policy required for VPC-attached Lambda",
+       "id": "AwsSolutions-IAM4"
+      },
+      {
+       "reason": "S3 bucket permissions use wildcard actions for object operations - required for image upload/download. OpenSearch permissions use wildcard for collection and index access - required for search operations. Bedrock permissions scoped to specific Claude Sonnet 4 model ARN.",
+       "id": "AwsSolutions-IAM5",
+       "applies_to": [
+        "Action::s3:GetObject*",
+        "Action::s3:GetBucket*",
+        "Action::s3:List*",
+        "Action::s3:DeleteObject*",
+        "Action::s3:Abort*",
+        "Action::s3:PutObject*",
+        "Resource::*",
+        "Resource::<StorageBucket*>/*",
+        "Resource::<CarImagesBucket930996DC.Arn>/*",
+        "Action::aoss:*",
+        "Resource::arn:aws:aoss:us-east-1:141814481613:collection/*",
+        "Resource::arn:aws:aoss:us-east-1:141814481613:index/primedeals-cars/*"
+       ]
+      },
+      {
+       "reason": "Node.js 20 is the latest LTS runtime supported by Lambda at time of implementation",
+       "id": "AwsSolutions-L1"
+      }
+     ]
+    }
+   }
+  },
+  "ApiHandlerServiceRoleDefaultPolicy10321D87": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefAuroraClusterSecretAttachmentDB8032DAFDEEBE73"
+       }
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "PrimeDeals-Storage:ExportsOutputFnGetAttCarImagesBucket930996DCArn085DB008"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "PrimeDeals-Storage:ExportsOutputFnGetAttCarImagesBucket930996DCArn085DB008"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "bedrock:InvokeModel",
+       "Effect": "Allow",
+       "Resource": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0"
+      },
+      {
+       "Action": "aoss:*",
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:aoss:us-east-1:141814481613:collection/*",
+        "arn:aws:aoss:us-east-1:141814481613:index/primedeals-cars/*"
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ApiHandlerServiceRoleDefaultPolicy10321D87",
+    "Roles": [
+     {
+      "Ref": "ApiHandlerServiceRole592E70E9"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/ApiHandler/ServiceRole/DefaultPolicy/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWSLambdaVPCAccessExecutionRole managed policy required for VPC-attached Lambda",
+       "id": "AwsSolutions-IAM4"
+      },
+      {
+       "reason": "S3 bucket permissions use wildcard actions for object operations - required for image upload/download. OpenSearch permissions use wildcard for collection and index access - required for search operations. Bedrock permissions scoped to specific Claude Sonnet 4 model ARN.",
+       "id": "AwsSolutions-IAM5",
+       "applies_to": [
+        "Action::s3:GetObject*",
+        "Action::s3:GetBucket*",
+        "Action::s3:List*",
+        "Action::s3:DeleteObject*",
+        "Action::s3:Abort*",
+        "Action::s3:PutObject*",
+        "Resource::*",
+        "Resource::<StorageBucket*>/*",
+        "Resource::<CarImagesBucket930996DC.Arn>/*",
+        "Action::aoss:*",
+        "Resource::arn:aws:aoss:us-east-1:141814481613:collection/*",
+        "Resource::arn:aws:aoss:us-east-1:141814481613:index/primedeals-cars/*"
+       ]
+      },
+      {
+       "reason": "Node.js 20 is the latest LTS runtime supported by Lambda at time of implementation",
+       "id": "AwsSolutions-L1"
+      }
+     ]
+    }
+   }
+  },
+  "ApiHandler5E7490E8": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-141814481613-us-east-1",
+     "S3Key": "7204acaa484d44a8a467e66a1f818a4d1ee1caf1ce1c2e2c36d3e88ed43c009a.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "DB_HOST": {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputFnGetAttRdsProxyE8EC09E1EndpointD77E918E"
+      },
+      "DB_NAME": "primedealauto",
+      "SECRET_ARN": {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefAuroraClusterSecretAttachmentDB8032DAFDEEBE73"
+      },
+      "S3_BUCKET": {
+       "Fn::ImportValue": "PrimeDeals-Storage:ExportsOutputRefCarImagesBucket930996DC5F1B28DB"
+      },
+      "CLOUDFRONT_DOMAIN": {
+       "Fn::ImportValue": "PrimeDeals-Storage:ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30"
+      },
+      "FRONTEND_URL": "*",
+      "OPENSEARCH_ENDPOINT": {
+       "Fn::ImportValue": "SearchCollectionEndpoint"
+      },
+      "BEDROCK_MODEL_ID": "anthropic.claude-sonnet-4-20250514-v1:0",
+      "BEDROCK_REGION": "us-east-1"
+     }
+    },
+    "Handler": "index.handler",
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "ApiHandlerServiceRole592E70E9",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "Timeout": 30,
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "LambdaSG9DBFCFB7",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefVpcisolatedSubnet1SubnetE62B1B9BEE029908"
+      },
+      {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefVpcisolatedSubnet2Subnet392170557C27A199"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "ApiHandlerServiceRoleDefaultPolicy10321D87",
+    "ApiHandlerServiceRole592E70E9"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/ApiHandler/Resource",
+    "aws:asset:path": "asset.7204acaa484d44a8a467e66a1f818a4d1ee1caf1ce1c2e2c36d3e88ed43c009a",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWSLambdaVPCAccessExecutionRole managed policy required for VPC-attached Lambda",
+       "id": "AwsSolutions-IAM4"
+      },
+      {
+       "reason": "S3 bucket permissions use wildcard actions for object operations - required for image upload/download. OpenSearch permissions use wildcard for collection and index access - required for search operations. Bedrock permissions scoped to specific Claude Sonnet 4 model ARN.",
+       "id": "AwsSolutions-IAM5",
+       "applies_to": [
+        "Action::s3:GetObject*",
+        "Action::s3:GetBucket*",
+        "Action::s3:List*",
+        "Action::s3:DeleteObject*",
+        "Action::s3:Abort*",
+        "Action::s3:PutObject*",
+        "Resource::*",
+        "Resource::<StorageBucket*>/*",
+        "Resource::<CarImagesBucket930996DC.Arn>/*",
+        "Action::aoss:*",
+        "Resource::arn:aws:aoss:us-east-1:141814481613:collection/*",
+        "Resource::arn:aws:aoss:us-east-1:141814481613:index/primedeals-cars/*"
+       ]
+      },
+      {
+       "reason": "Node.js 20 is the latest LTS runtime supported by Lambda at time of implementation",
+       "id": "AwsSolutions-L1"
+      }
+     ]
+    }
+   }
+  },
+  "VpcProxyHandlerServiceRole33101681": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/VpcProxyHandler/ServiceRole/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWS managed policies (AWSLambdaBasicExecutionRole, AWSLambdaVPCAccessExecutionRole) are acceptable for Lambda execution roles",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      },
+      {
+       "reason": "Using Node.js 20 which is the latest LTS runtime supported by CDK",
+       "id": "AwsSolutions-L1"
+      }
+     ]
+    }
+   }
+  },
+  "VpcProxyHandlerServiceRoleDefaultPolicy0568F94E": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefAuroraClusterSecretAttachmentDB8032DAFDEEBE73"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "VpcProxyHandlerServiceRoleDefaultPolicy0568F94E",
+    "Roles": [
+     {
+      "Ref": "VpcProxyHandlerServiceRole33101681"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/VpcProxyHandler/ServiceRole/DefaultPolicy/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWS managed policies (AWSLambdaBasicExecutionRole, AWSLambdaVPCAccessExecutionRole) are acceptable for Lambda execution roles",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      },
+      {
+       "reason": "Using Node.js 20 which is the latest LTS runtime supported by CDK",
+       "id": "AwsSolutions-L1"
+      }
+     ]
+    }
+   }
+  },
+  "VpcProxyHandlerE518F785": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-141814481613-us-east-1",
+     "S3Key": "6a3317aa9a75a1b3fb87a72bce0b4ab50e8f1d336d245d0a2c8db6b8f69993dc.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "DB_HOST": {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputFnGetAttRdsProxyE8EC09E1EndpointD77E918E"
+      },
+      "DB_NAME": "primedealauto",
+      "SECRET_ARN": {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefAuroraClusterSecretAttachmentDB8032DAFDEEBE73"
+      }
+     }
+    },
+    "Handler": "index.handler",
+    "MemorySize": 512,
+    "Role": {
+     "Fn::GetAtt": [
+      "VpcProxyHandlerServiceRole33101681",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "Timeout": 30,
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "LambdaSG9DBFCFB7",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefVpcisolatedSubnet1SubnetE62B1B9BEE029908"
+      },
+      {
+       "Fn::ImportValue": "PrimeDeals-Database:ExportsOutputRefVpcisolatedSubnet2Subnet392170557C27A199"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "VpcProxyHandlerServiceRoleDefaultPolicy0568F94E",
+    "VpcProxyHandlerServiceRole33101681"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/VpcProxyHandler/Resource",
+    "aws:asset:path": "asset.6a3317aa9a75a1b3fb87a72bce0b4ab50e8f1d336d245d0a2c8db6b8f69993dc",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWS managed policies (AWSLambdaBasicExecutionRole, AWSLambdaVPCAccessExecutionRole) are acceptable for Lambda execution roles",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      },
+      {
+       "reason": "Using Node.js 20 which is the latest LTS runtime supported by CDK",
+       "id": "AwsSolutions-L1"
+      }
+     ]
+    }
+   }
+  },
+  "ChatHandlerServiceRole801A14FE": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/ChatHandler/ServiceRole/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWS managed policy (AWSLambdaBasicExecutionRole) is acceptable for Lambda execution role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      },
+      {
+       "reason": "Using Node.js 20 which is the latest LTS runtime supported by CDK",
+       "id": "AwsSolutions-L1"
+      },
+      {
+       "reason": "Bedrock model access requires specific model ARN pattern",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "ChatHandlerServiceRoleDefaultPolicy7E79112C": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "VpcProxyHandlerE518F785",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "VpcProxyHandlerE518F785",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "bedrock:InvokeModel",
+       "Effect": "Allow",
+       "Resource": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ChatHandlerServiceRoleDefaultPolicy7E79112C",
+    "Roles": [
+     {
+      "Ref": "ChatHandlerServiceRole801A14FE"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/ChatHandler/ServiceRole/DefaultPolicy/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWS managed policy (AWSLambdaBasicExecutionRole) is acceptable for Lambda execution role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      },
+      {
+       "reason": "Using Node.js 20 which is the latest LTS runtime supported by CDK",
+       "id": "AwsSolutions-L1"
+      },
+      {
+       "reason": "Bedrock model access requires specific model ARN pattern",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "ChatHandler6667856F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-141814481613-us-east-1",
+     "S3Key": "1118490495a570daf7b4687d5630c491746c68a9d54c1dc41e9d194545357274.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "VPC_PROXY_FUNCTION_NAME": {
+       "Ref": "VpcProxyHandlerE518F785"
+      },
+      "FRONTEND_URL": "*",
+      "BEDROCK_MODEL_ID": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "BEDROCK_REGION": "us-east-1"
+     }
+    },
+    "Handler": "index.handler",
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "ChatHandlerServiceRole801A14FE",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "Timeout": 60
+   },
+   "DependsOn": [
+    "ChatHandlerServiceRoleDefaultPolicy7E79112C",
+    "ChatHandlerServiceRole801A14FE"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/ChatHandler/Resource",
+    "aws:asset:path": "asset.1118490495a570daf7b4687d5630c491746c68a9d54c1dc41e9d194545357274",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "AWS managed policy (AWSLambdaBasicExecutionRole) is acceptable for Lambda execution role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      },
+      {
+       "reason": "Using Node.js 20 which is the latest LTS runtime supported by CDK",
+       "id": "AwsSolutions-L1"
+      },
+      {
+       "reason": "Bedrock model access requires specific model ARN pattern",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "ApiF70053CD": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Description": "Prime Deal Auto REST API",
+    "Name": "PrimeDealAuto-Api",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiCloudWatchRole73EC6FC4": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/CloudWatchRole/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiAccountA18C9B29": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "ApiCloudWatchRole73EC6FC4",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "ApiF70053CD"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Account",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiDeploymentB17BE62D00f849d40b5107d32493e969e5c4e924": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Prime Deal Auto REST API",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "DependsOn": [
+    "ApiadminOPTIONSC9D86527",
+    "ApiadminreindexOPTIONS349B222A",
+    "ApiadminreindexPOST170BEBFE",
+    "ApiadminreindexBC5EA9A2",
+    "ApiadminF2AEC3DE",
+    "ApicarscarIdDELETE82F89FB9",
+    "ApicarscarIdGET7F0EF409",
+    "ApicarscarIdOPTIONS90786981",
+    "ApicarscarIdPUT48E4AB8C",
+    "ApicarscarId669012FB",
+    "ApicarsGET30C7401E",
+    "ApicarsOPTIONS57CEEED0",
+    "ApicarsPOST0D867B26",
+    "Apicars8494D6FC",
+    "ApichatOPTIONS453F5123",
+    "ApichatPOSTD108BE84",
+    "Apichat490DD969",
+    "ApichatsessionsidDELETE3A2FA9D8",
+    "ApichatsessionsidGET517AF7AF",
+    "ApichatsessionsidOPTIONSE0D3C81F",
+    "ApichatsessionsidFA6691D9",
+    "ApichatsessionsGET0F517131",
+    "ApichatsessionsOPTIONS481B12F7",
+    "ApichatsessionsDFDA3939",
+    "ApihealthGET8A9DC1E4",
+    "ApihealthOPTIONS119B6E46",
+    "Apihealth5CB7A415",
+    "ApiOPTIONS5886EA5D",
+    "ApisearchfacetsGET23D3D01B",
+    "ApisearchfacetsOPTIONS532CFE89",
+    "Apisearchfacets3527EB4E",
+    "ApisearchGETCD9A8201",
+    "ApisearchOPTIONS8406BC25",
+    "ApisearchACEE53D1",
+    "ApisearchsuggestionsGET4DC55392",
+    "ApisearchsuggestionsOPTIONS800DFF1A",
+    "ApisearchsuggestionsAFA111F7"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Deployment/Resource",
+    "aws:cdk:do-not-refactor": true,
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiDeploymentStagev102147F91": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "CacheClusterEnabled": true,
+    "CacheClusterSize": "0.5",
+    "DeploymentId": {
+     "Ref": "ApiDeploymentB17BE62D00f849d40b5107d32493e969e5c4e924"
+    },
+    "MethodSettings": [
+     {
+      "CachingEnabled": true,
+      "DataTraceEnabled": false,
+      "HttpMethod": "*",
+      "ResourcePath": "/*",
+      "ThrottlingBurstLimit": 100,
+      "ThrottlingRateLimit": 50
+     }
+    ],
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    },
+    "StageName": "v1",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "DependsOn": [
+    "ApiAccountA18C9B29"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/DeploymentStage.v1/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiOPTIONS5886EA5D": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "Apihealth5CB7A415": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "health",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/health/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApihealthOPTIONS119B6E46": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "Apihealth5CB7A415"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/health/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApihealthGETApiPermissionPrimeDealsApiFD7AFBC2GEThealthD50238C6": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/GET/health"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/health/GET/ApiPermission.PrimeDealsApiFD7AFBC2.GET..health",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApihealthGETApiPermissionTestPrimeDealsApiFD7AFBC2GEThealthBFAEC870": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/GET/health"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/health/GET/ApiPermission.Test.PrimeDealsApiFD7AFBC2.GET..health",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApihealthGET8A9DC1E4": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "Apihealth5CB7A415"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/health/GET/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "Apicars8494D6FC": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "cars",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarsOPTIONS57CEEED0": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "Apicars8494D6FC"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarsGETApiPermissionPrimeDealsApiFD7AFBC2GETcars24018656": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/GET/cars"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/GET/ApiPermission.PrimeDealsApiFD7AFBC2.GET..cars",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarsGETApiPermissionTestPrimeDealsApiFD7AFBC2GETcars094DDD70": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/GET/cars"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/GET/ApiPermission.Test.PrimeDealsApiFD7AFBC2.GET..cars",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarsGET30C7401E": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "Apicars8494D6FC"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/GET/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarsPOSTApiPermissionPrimeDealsApiFD7AFBC2POSTcarsA3141F9E": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/POST/cars"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/POST/ApiPermission.PrimeDealsApiFD7AFBC2.POST..cars",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarsPOSTApiPermissionTestPrimeDealsApiFD7AFBC2POSTcars7D750615": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/POST/cars"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/POST/ApiPermission.Test.PrimeDealsApiFD7AFBC2.POST..cars",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarsPOST0D867B26": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "CognitoAuthorizerF3215DBC"
+    },
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "Apicars8494D6FC"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/POST/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarId669012FB": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "Apicars8494D6FC"
+    },
+    "PathPart": "{carId}",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdOPTIONS90786981": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "ApicarscarId669012FB"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdGETApiPermissionPrimeDealsApiFD7AFBC2GETcarscarId0C55503D": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/GET/cars/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/GET/ApiPermission.PrimeDealsApiFD7AFBC2.GET..cars.{carId}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdGETApiPermissionTestPrimeDealsApiFD7AFBC2GETcarscarIdFE26391D": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/GET/cars/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/GET/ApiPermission.Test.PrimeDealsApiFD7AFBC2.GET..cars.{carId}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdGET7F0EF409": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "ApicarscarId669012FB"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/GET/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdPUTApiPermissionPrimeDealsApiFD7AFBC2PUTcarscarId270A7D43": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/PUT/cars/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/PUT/ApiPermission.PrimeDealsApiFD7AFBC2.PUT..cars.{carId}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdPUTApiPermissionTestPrimeDealsApiFD7AFBC2PUTcarscarId04137D35": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/PUT/cars/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/PUT/ApiPermission.Test.PrimeDealsApiFD7AFBC2.PUT..cars.{carId}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdPUT48E4AB8C": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "CognitoAuthorizerF3215DBC"
+    },
+    "HttpMethod": "PUT",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "ApicarscarId669012FB"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/PUT/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdDELETEApiPermissionPrimeDealsApiFD7AFBC2DELETEcarscarId6E8987C2": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/DELETE/cars/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/DELETE/ApiPermission.PrimeDealsApiFD7AFBC2.DELETE..cars.{carId}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdDELETEApiPermissionTestPrimeDealsApiFD7AFBC2DELETEcarscarIdBAF62048": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/DELETE/cars/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/DELETE/ApiPermission.Test.PrimeDealsApiFD7AFBC2.DELETE..cars.{carId}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApicarscarIdDELETE82F89FB9": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "CognitoAuthorizerF3215DBC"
+    },
+    "HttpMethod": "DELETE",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "ApicarscarId669012FB"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/cars/{carId}/DELETE/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchACEE53D1": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "search",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchOPTIONS8406BC25": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "ApisearchACEE53D1"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchGETApiPermissionPrimeDealsApiFD7AFBC2GETsearchC6BC0F3C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/GET/search"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/GET/ApiPermission.PrimeDealsApiFD7AFBC2.GET..search",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchGETApiPermissionTestPrimeDealsApiFD7AFBC2GETsearchE2B91CB4": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/GET/search"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/GET/ApiPermission.Test.PrimeDealsApiFD7AFBC2.GET..search",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchGETCD9A8201": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "GET",
+    "Integration": {
+     "CacheKeyParameters": [
+      "method.request.querystring.q",
+      "method.request.querystring.make",
+      "method.request.querystring.model",
+      "method.request.querystring.variant",
+      "method.request.querystring.minPrice",
+      "method.request.querystring.maxPrice",
+      "method.request.querystring.minYear",
+      "method.request.querystring.maxYear",
+      "method.request.querystring.bodyType",
+      "method.request.querystring.fuelType",
+      "method.request.querystring.transmission",
+      "method.request.querystring.condition",
+      "method.request.querystring.sortBy",
+      "method.request.querystring.sortOrder",
+      "method.request.querystring.limit",
+      "method.request.querystring.offset"
+     ],
+     "CacheNamespace": {
+      "Ref": "ApisearchACEE53D1"
+     },
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "RequestParameters": {
+     "method.request.querystring.q": false,
+     "method.request.querystring.make": false,
+     "method.request.querystring.model": false,
+     "method.request.querystring.variant": false,
+     "method.request.querystring.minPrice": false,
+     "method.request.querystring.maxPrice": false,
+     "method.request.querystring.minYear": false,
+     "method.request.querystring.maxYear": false,
+     "method.request.querystring.bodyType": false,
+     "method.request.querystring.fuelType": false,
+     "method.request.querystring.transmission": false,
+     "method.request.querystring.condition": false,
+     "method.request.querystring.sortBy": false,
+     "method.request.querystring.sortOrder": false,
+     "method.request.querystring.limit": false,
+     "method.request.querystring.offset": false
+    },
+    "ResourceId": {
+     "Ref": "ApisearchACEE53D1"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/GET/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "Apisearchfacets3527EB4E": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "ApisearchACEE53D1"
+    },
+    "PathPart": "facets",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/facets/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchfacetsOPTIONS532CFE89": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "Apisearchfacets3527EB4E"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/facets/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchfacetsGETApiPermissionPrimeDealsApiFD7AFBC2GETsearchfacetsEC011F28": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/GET/search/facets"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/facets/GET/ApiPermission.PrimeDealsApiFD7AFBC2.GET..search.facets",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchfacetsGETApiPermissionTestPrimeDealsApiFD7AFBC2GETsearchfacetsA627DF74": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/GET/search/facets"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/facets/GET/ApiPermission.Test.PrimeDealsApiFD7AFBC2.GET..search.facets",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchfacetsGET23D3D01B": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "GET",
+    "Integration": {
+     "CacheKeyParameters": [
+      "method.request.querystring.q",
+      "method.request.querystring.make",
+      "method.request.querystring.model",
+      "method.request.querystring.variant",
+      "method.request.querystring.minPrice",
+      "method.request.querystring.maxPrice",
+      "method.request.querystring.minYear",
+      "method.request.querystring.maxYear",
+      "method.request.querystring.bodyType",
+      "method.request.querystring.fuelType",
+      "method.request.querystring.transmission",
+      "method.request.querystring.condition"
+     ],
+     "CacheNamespace": {
+      "Ref": "Apisearchfacets3527EB4E"
+     },
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "RequestParameters": {
+     "method.request.querystring.q": false,
+     "method.request.querystring.make": false,
+     "method.request.querystring.model": false,
+     "method.request.querystring.variant": false,
+     "method.request.querystring.minPrice": false,
+     "method.request.querystring.maxPrice": false,
+     "method.request.querystring.minYear": false,
+     "method.request.querystring.maxYear": false,
+     "method.request.querystring.bodyType": false,
+     "method.request.querystring.fuelType": false,
+     "method.request.querystring.transmission": false,
+     "method.request.querystring.condition": false
+    },
+    "ResourceId": {
+     "Ref": "Apisearchfacets3527EB4E"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/facets/GET/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchsuggestionsAFA111F7": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "ApisearchACEE53D1"
+    },
+    "PathPart": "suggestions",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/suggestions/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchsuggestionsOPTIONS800DFF1A": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "ApisearchsuggestionsAFA111F7"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/suggestions/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchsuggestionsGETApiPermissionPrimeDealsApiFD7AFBC2GETsearchsuggestions2F48C41A": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/GET/search/suggestions"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/suggestions/GET/ApiPermission.PrimeDealsApiFD7AFBC2.GET..search.suggestions",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchsuggestionsGETApiPermissionTestPrimeDealsApiFD7AFBC2GETsearchsuggestions7578B06A": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/GET/search/suggestions"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/suggestions/GET/ApiPermission.Test.PrimeDealsApiFD7AFBC2.GET..search.suggestions",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApisearchsuggestionsGET4DC55392": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "GET",
+    "Integration": {
+     "CacheKeyParameters": [
+      "method.request.querystring.q",
+      "method.request.querystring.field"
+     ],
+     "CacheNamespace": {
+      "Ref": "ApisearchsuggestionsAFA111F7"
+     },
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "RequestParameters": {
+     "method.request.querystring.q": true,
+     "method.request.querystring.field": true
+    },
+    "ResourceId": {
+     "Ref": "ApisearchsuggestionsAFA111F7"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/search/suggestions/GET/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiadminF2AEC3DE": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "admin",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/admin/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiadminOPTIONSC9D86527": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "ApiadminF2AEC3DE"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/admin/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiadminreindexBC5EA9A2": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "ApiadminF2AEC3DE"
+    },
+    "PathPart": "reindex",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/admin/reindex/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiadminreindexOPTIONS349B222A": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "ApiadminreindexBC5EA9A2"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/admin/reindex/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiadminreindexPOSTApiPermissionPrimeDealsApiFD7AFBC2POSTadminreindex413E1C87": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/POST/admin/reindex"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/admin/reindex/POST/ApiPermission.PrimeDealsApiFD7AFBC2.POST..admin.reindex",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiadminreindexPOSTApiPermissionTestPrimeDealsApiFD7AFBC2POSTadminreindex12E5CC62": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/POST/admin/reindex"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/admin/reindex/POST/ApiPermission.Test.PrimeDealsApiFD7AFBC2.POST..admin.reindex",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApiadminreindexPOST170BEBFE": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "CognitoAuthorizerF3215DBC"
+    },
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "ApiadminreindexBC5EA9A2"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/admin/reindex/POST/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "Apichat490DD969": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "chat",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatOPTIONS453F5123": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "Apichat490DD969"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatPOSTApiPermissionPrimeDealsApiFD7AFBC2POSTchat1FE1B0EA": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ChatHandler6667856F",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/POST/chat"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/POST/ApiPermission.PrimeDealsApiFD7AFBC2.POST..chat",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatPOSTApiPermissionTestPrimeDealsApiFD7AFBC2POSTchatFE55464E": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ChatHandler6667856F",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/POST/chat"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/POST/ApiPermission.Test.PrimeDealsApiFD7AFBC2.POST..chat",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatPOSTD108BE84": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ChatHandler6667856F",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "Apichat490DD969"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/POST/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsDFDA3939": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "Apichat490DD969"
+    },
+    "PathPart": "sessions",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsOPTIONS481B12F7": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "ApichatsessionsDFDA3939"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsGETApiPermissionPrimeDealsApiFD7AFBC2GETchatsessions99128EF0": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ChatHandler6667856F",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/GET/chat/sessions"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/GET/ApiPermission.PrimeDealsApiFD7AFBC2.GET..chat.sessions",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsGETApiPermissionTestPrimeDealsApiFD7AFBC2GETchatsessions44700983": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ChatHandler6667856F",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/GET/chat/sessions"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/GET/ApiPermission.Test.PrimeDealsApiFD7AFBC2.GET..chat.sessions",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsGET0F517131": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "CognitoAuthorizerF3215DBC"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ChatHandler6667856F",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "ApichatsessionsDFDA3939"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/GET/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsidFA6691D9": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "ApichatsessionsDFDA3939"
+    },
+    "PathPart": "{id}",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/{id}/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsidOPTIONSE0D3C81F": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "ApichatsessionsidFA6691D9"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/{id}/OPTIONS/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsidGETApiPermissionPrimeDealsApiFD7AFBC2GETchatsessionsid749781F0": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ChatHandler6667856F",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/GET/chat/sessions/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/{id}/GET/ApiPermission.PrimeDealsApiFD7AFBC2.GET..chat.sessions.{id}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsidGETApiPermissionTestPrimeDealsApiFD7AFBC2GETchatsessionsid030A839A": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ChatHandler6667856F",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/GET/chat/sessions/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/{id}/GET/ApiPermission.Test.PrimeDealsApiFD7AFBC2.GET..chat.sessions.{id}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsidGET517AF7AF": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ChatHandler6667856F",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "ApichatsessionsidFA6691D9"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/{id}/GET/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsidDELETEApiPermissionPrimeDealsApiFD7AFBC2DELETEchatsessionsidA2E62F0A": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ChatHandler6667856F",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/DELETE/chat/sessions/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/{id}/DELETE/ApiPermission.PrimeDealsApiFD7AFBC2.DELETE..chat.sessions.{id}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsidDELETEApiPermissionTestPrimeDealsApiFD7AFBC2DELETEchatsessionsid98C94E5F": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ChatHandler6667856F",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:141814481613:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/DELETE/chat/sessions/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/{id}/DELETE/ApiPermission.Test.PrimeDealsApiFD7AFBC2.DELETE..chat.sessions.{id}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ApichatsessionsidDELETE3A2FA9D8": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "CognitoAuthorizerF3215DBC"
+    },
+    "HttpMethod": "DELETE",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ChatHandler6667856F",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "ApichatsessionsidFA6691D9"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/Api/Default/chat/sessions/{id}/DELETE/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Request validation handled in Lambda handler with Zod schemas",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "Authorization handled per-method - some endpoints are intentionally public (GET /cars, GET /health)",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Cognito authorizer configured for protected endpoints only - public endpoints do not require auth",
+       "id": "AwsSolutions-COG4"
+      },
+      {
+       "reason": "API Gateway access logging deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "WAF integration deferred to production hardening (Spec 14)",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "CloudWatch logging at stage level deferred to MonitoringStack (Spec 12)",
+       "id": "AwsSolutions-APIG6"
+      },
+      {
+       "reason": "AWS managed policy required for API Gateway CloudWatch logging role",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "CognitoAuthorizerF3215DBC": {
+   "Type": "AWS::ApiGateway::Authorizer",
+   "Properties": {
+    "IdentitySource": "method.request.header.Authorization",
+    "Name": "PrimeDealsApiCognitoAuthorizer501F8CDA",
+    "ProviderARNs": [
+     {
+      "Fn::ImportValue": "PrimeDeals-Auth:ExportsOutputFnGetAttUserPool6BA7E5F2Arn686ACC00"
+     }
+    ],
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    },
+    "Type": "COGNITO_USER_POOLS"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/CognitoAuthorizer/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31Q0U7DMAz8lr1nZnT7gW4IxAMwdeJ5ylLTeWvjKnaYStV/R+nK4Imnu/PJvksyyFYLWMzsReauPM9rOkC/U+vOxl5k36PLoN+hi4G0ewocW7P58P8Pnn0VUGQwtW0Opd17LvEk8DrCY/ROib0h20BfcI1pf8Qt1+S6JK9sMLLcWxFUgTyBkSWsozujrq3gdB76zYe/XU3LGBoSIfaDsS1VVvFiO+gLFM1bGuN+ae4cR6/mAduauwa9pukftVNbjR2vpEDhGByODV5Qj1wmc2I/7hQyca48Kb8Lhi1zLXnUIwf6wjAWuKlhMOMzUxD5KplvUduog0lfCCe5+8xWcJ/BYnYSonmIXqlBKK74DVO9RozMAQAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Api/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ApiEndpoint4F160690": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "ApiF70053CD"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "ApiDeploymentStagev102147F91"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "ApiUrl": {
+   "Description": "API Gateway endpoint URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "ApiF70053CD"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "ApiDeploymentStagev102147F91"
+      },
+      "/"
+     ]
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Api-ApiUrl"
+   }
+  },
+  "ApiId": {
+   "Description": "API Gateway REST API ID",
+   "Value": {
+    "Ref": "ApiF70053CD"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Api-ApiId"
+   }
+  },
+  "ExportsOutputFnGetAttApiHandlerServiceRole592E70E9Arn5480EF3D": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ApiHandlerServiceRole592E70E9",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Api:ExportsOutputFnGetAttApiHandlerServiceRole592E70E9Arn5480EF3D"
+   }
+  },
+  "ExportsOutputRefApiF70053CD5653BA4D": {
+   "Value": {
+    "Ref": "ApiF70053CD"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Api:ExportsOutputRefApiF70053CD5653BA4D"
+   }
+  },
+  "ExportsOutputRefApiDeploymentStagev102147F91576080D6": {
+   "Value": {
+    "Ref": "ApiDeploymentStagev102147F91"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Api:ExportsOutputRefApiDeploymentStagev102147F91576080D6"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

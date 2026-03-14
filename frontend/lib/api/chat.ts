@@ -2,30 +2,24 @@
 // Functions for interacting with the chat endpoints
 
 import { get, post, del } from './client';
-import { ChatMessage, ChatSession } from './types';
+import type {
+  SendMessageRequest,
+  SendMessageResponse,
+  ChatSessionSummary,
+  ChatSessionDetail,
+} from '@/lib/types/chat';
+
+// Re-export types for convenience
+export type {
+  SendMessageRequest,
+  SendMessageResponse,
+  ChatSessionSummary,
+  ChatSessionDetail,
+} from '@/lib/types/chat';
 
 /**
- * Send message request
- */
-export interface SendMessageRequest {
-  message: string;
-  sessionToken?: string; // Optional for continuing existing session
-}
-
-/**
- * Send message response
- */
-export interface SendMessageResponse {
-  message: string; // AI assistant response
-  sessionToken: string; // Session token for subsequent messages
-  conversationId: string; // Session ID
-}
-
-/**
- * Send a message to the AI chat assistant
- * 
- * @param request - Message and optional session token
- * @returns AI response with session token
+ * Send a chat message
+ * POST /chat (no auth required)
  */
 export async function sendChatMessage(
   request: SendMessageRequest
@@ -34,49 +28,30 @@ export async function sendChatMessage(
 }
 
 /**
- * Get all chat sessions for the current user
- * Requires authentication
- * 
- * @returns List of chat sessions
+ * Get user's chat sessions (authenticated only)
+ * GET /chat/sessions
  */
-export async function getChatSessions(): Promise<ChatSession[]> {
-  return get<ChatSession[]>('/chat/sessions');
+export async function getChatSessions(): Promise<ChatSessionSummary[]> {
+  return get<ChatSessionSummary[]>('/chat/sessions');
 }
 
 /**
- * Get a specific chat session with messages
- * Requires authentication
- * 
- * @param sessionId - Session UUID
- * @returns Session with messages
+ * Get session detail with message history
+ * GET /chat/sessions/:id
+ * For anonymous users, sessionToken query param is required
  */
-export async function getChatSession(sessionId: string): Promise<{
-  session: ChatSession;
-  messages: ChatMessage[];
-}> {
-  return get<{ session: ChatSession; messages: ChatMessage[] }>(
-    `/chat/sessions/${sessionId}`
-  );
+export async function getChatSession(
+  sessionId: string,
+  sessionToken?: string
+): Promise<ChatSessionDetail> {
+  const params = sessionToken ? { sessionToken } : undefined;
+  return get<ChatSessionDetail>(`/chat/sessions/${sessionId}`, params);
 }
 
 /**
- * Delete a chat session
- * Requires authentication
- * 
- * @param sessionId - Session UUID
+ * Delete a chat session (authenticated only)
+ * DELETE /chat/sessions/:id
  */
 export async function deleteChatSession(sessionId: string): Promise<void> {
   return del<void>(`/chat/sessions/${sessionId}`);
-}
-
-/**
- * Get messages for a session
- * Requires authentication
- * 
- * @param sessionId - Session UUID
- * @returns List of messages
- */
-export async function getChatMessages(sessionId: string): Promise<ChatMessage[]> {
-  const response = await getChatSession(sessionId);
-  return response.messages;
 }

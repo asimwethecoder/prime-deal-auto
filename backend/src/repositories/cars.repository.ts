@@ -22,61 +22,107 @@ export interface CarFilters {
 
 const ALLOWED_SORT_COLUMNS = ['price', 'year', 'mileage', 'created_at'];
 
+export interface CreateCarData {
+  make: string;
+  model: string;
+  variant?: string;
+  year: number;
+  price: number;
+  mileage: number;
+  condition: string;
+  body_type?: string;
+  transmission: string;
+  fuel_type: string;
+  color?: string;
+  description?: string;
+  features?: string[];
+  status: string;
+}
+
 export class CarRepository {
+  async create(data: CreateCarData): Promise<Car> {
+    const pool = await getPool();
+    const featuresJson = JSON.stringify(data.features ?? []);
+    const result = await pool.query(
+      `INSERT INTO cars (
+        make, model, variant, year, price, mileage, condition,
+        body_type, transmission, fuel_type, color, description, features, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14)
+      RETURNING *`,
+      [
+        data.make,
+        data.model,
+        data.variant ?? null,
+        data.year,
+        data.price,
+        data.mileage,
+        data.condition,
+        data.body_type ?? null,
+        data.transmission,
+        data.fuel_type,
+        data.color ?? null,
+        data.description ?? null,
+        featuresJson,
+        data.status,
+      ]
+    );
+    return result.rows[0] as Car;
+  }
+
   async findAll(filters: CarFilters): Promise<{ cars: Car[]; total: number }> {
     const pool = await getPool();
 
-    const conditions: string[] = ['status = $1'];
+    const conditions: string[] = ['c.status = $1'];
     const params: unknown[] = [filters.status || 'active'];
     let paramIndex = 2;
 
     if (filters.make) {
-      conditions.push(`make ILIKE $${paramIndex}`);
+      conditions.push(`c.make ILIKE $${paramIndex}`);
       params.push(`%${filters.make}%`);
       paramIndex++;
     }
     if (filters.model) {
-      conditions.push(`model ILIKE $${paramIndex}`);
+      conditions.push(`c.model ILIKE $${paramIndex}`);
       params.push(`%${filters.model}%`);
       paramIndex++;
     }
     if (filters.minYear) {
-      conditions.push(`year >= $${paramIndex}`);
+      conditions.push(`c.year >= $${paramIndex}`);
       params.push(filters.minYear);
       paramIndex++;
     }
     if (filters.maxYear) {
-      conditions.push(`year <= $${paramIndex}`);
+      conditions.push(`c.year <= $${paramIndex}`);
       params.push(filters.maxYear);
       paramIndex++;
     }
     if (filters.minPrice) {
-      conditions.push(`price >= $${paramIndex}`);
+      conditions.push(`c.price >= $${paramIndex}`);
       params.push(filters.minPrice);
       paramIndex++;
     }
     if (filters.maxPrice) {
-      conditions.push(`price <= $${paramIndex}`);
+      conditions.push(`c.price <= $${paramIndex}`);
       params.push(filters.maxPrice);
       paramIndex++;
     }
     if (filters.condition) {
-      conditions.push(`condition = $${paramIndex}`);
+      conditions.push(`c.condition = $${paramIndex}`);
       params.push(filters.condition);
       paramIndex++;
     }
     if (filters.transmission) {
-      conditions.push(`transmission = $${paramIndex}`);
+      conditions.push(`c.transmission = $${paramIndex}`);
       params.push(filters.transmission);
       paramIndex++;
     }
     if (filters.fuelType) {
-      conditions.push(`fuel_type = $${paramIndex}`);
+      conditions.push(`c.fuel_type = $${paramIndex}`);
       params.push(filters.fuelType);
       paramIndex++;
     }
     if (filters.bodyType) {
-      conditions.push(`body_type ILIKE $${paramIndex}`);
+      conditions.push(`c.body_type ILIKE $${paramIndex}`);
       params.push(`%${filters.bodyType}%`);
       paramIndex++;
     }
@@ -91,17 +137,19 @@ export class CarRepository {
 
     // Count query
     const countResult = await pool.query(
-      `SELECT COUNT(*) FROM cars WHERE ${whereClause}`,
+      `SELECT COUNT(*) FROM cars c WHERE ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0].count, 10);
 
-    // Data query with pagination
+    // Data query with pagination and LEFT JOIN for primary image
     const dataParams = [...params, filters.limit, filters.offset];
     const dataResult = await pool.query(
-      `SELECT * FROM cars 
+      `SELECT c.*, ci.cloudfront_url as primary_image_url
+       FROM cars c
+       LEFT JOIN car_images ci ON c.id = ci.car_id AND ci.is_primary = true
        WHERE ${whereClause} 
-       ORDER BY ${sortColumn} ${sortOrder}
+       ORDER BY c.${sortColumn} ${sortOrder}
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       dataParams
     );
@@ -111,153 +159,258 @@ export class CarRepository {
 
   async findById(id: string): Promise<Car | null> {
     const pool = await getPool();
-    const result = await pool.query('SELECT * FROM cars WHERE id = $1', [id]);
-    return result.rows[0] || null;
+    
+    // Fetch car with all images ordered by order_index
+    const carResult = await pool.query('SELECT * FROM cars WHERE id = $1', [id]);
+    if (carResult.rows.length === 0) {
+      return null;
+    }
+    
+    const car = carResult.rows[0];
+    
+    // Fetch images for this car, ordered by order_index with primary first
+    const imagesResult = await pool.query(
+      `SELECT id, car_id, s3_key, cloudfront_url, thumbnail_url, is_primary, order_index, created_at
+       FROM car_images 
+       WHERE car_id = $1 
+       ORDER BY is_primary DESC, order_index ASC`,
+      [id]
+    );
+    
+    // Attach images to car object
+    car.images = imagesResult.rows;
+    car.primary_image_url = imagesResult.rows.find((img: { is_primary: boolean }) => img.is_primary)?.cloudfront_url || null;
+    
+    return car;
   }
+
+  async update(id: string, data: Partial<CreateCarData>): Promise<Car | null> {
+    const pool = await getPool();
+    
+    const updates: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    if (data.make !== undefined) {
+      updates.push(`make = $${paramIndex++}`);
+      params.push(data.make);
+    }
+    if (data.model !== undefined) {
+      updates.push(`model = $${paramIndex++}`);
+      params.push(data.model);
+    }
+    if (data.variant !== undefined) {
+      updates.push(`variant = $${paramIndex++}`);
+      params.push(data.variant || null);
+    }
+    if (data.year !== undefined) {
+      updates.push(`year = $${paramIndex++}`);
+      params.push(data.year);
+    }
+    if (data.price !== undefined) {
+      updates.push(`price = $${paramIndex++}`);
+      params.push(data.price);
+    }
+    if (data.mileage !== undefined) {
+      updates.push(`mileage = $${paramIndex++}`);
+      params.push(data.mileage);
+    }
+    if (data.condition !== undefined) {
+      updates.push(`condition = $${paramIndex++}`);
+      params.push(data.condition);
+    }
+    if (data.body_type !== undefined) {
+      updates.push(`body_type = $${paramIndex++}`);
+      params.push(data.body_type || null);
+    }
+    if (data.transmission !== undefined) {
+      updates.push(`transmission = $${paramIndex++}`);
+      params.push(data.transmission);
+    }
+    if (data.fuel_type !== undefined) {
+      updates.push(`fuel_type = $${paramIndex++}`);
+      params.push(data.fuel_type);
+    }
+    if (data.color !== undefined) {
+      updates.push(`color = $${paramIndex++}`);
+      params.push(data.color || null);
+    }
+    if (data.description !== undefined) {
+      updates.push(`description = $${paramIndex++}`);
+      params.push(data.description || null);
+    }
+    if (data.features !== undefined) {
+      updates.push(`features = $${paramIndex++}::jsonb`);
+      params.push(JSON.stringify(data.features ?? []));
+    }
+    if (data.status !== undefined) {
+      updates.push(`status = $${paramIndex++}`);
+      params.push(data.status);
+    }
+
+    if (updates.length === 0) {
+      return this.findById(id);
+    }
+
+    updates.push(`updated_at = NOW()`);
+    params.push(id);
+
+    const result = await pool.query(
+      `UPDATE cars SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      params
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return result.rows[0] as Car;
+  }
+
+  async softDelete(id: string): Promise<boolean> {
+    const pool = await getPool();
+    const result = await pool.query(
+      `UPDATE cars SET status = 'deleted', updated_at = NOW() WHERE id = $1 AND status != 'deleted' RETURNING id`,
+      [id]
+    );
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
 
   /**
    * Full-text search using PostgreSQL as fallback when OpenSearch is unavailable
    * Uses tsvector column with GIN index for performance
-   * 
-   * @param query - Search query string (null for browse/filter-only)
-   * @param filters - Filter criteria (make, model, price range, etc.)
-   * @param options - Pagination and sorting options
-   * @returns Search results with hits and total count in same format as SearchRepository
    */
   async fullTextSearch(
-      query: string | null,
-      filters: SearchFilters,
-      options: SearchOptions
-    ): Promise<SearchResult> {
-      const pool = await getPool();
+    query: string | null,
+    filters: SearchFilters,
+    options: SearchOptions
+  ): Promise<SearchResult> {
+    const pool = await getPool();
 
-      const params: unknown[] = [];
-      let paramIndex = 1;
+    const params: unknown[] = [];
+    let paramIndex = 1;
 
-      const whereClauses: string[] = ["c.status = 'active'"];
+    const whereClauses: string[] = ["c.status = 'active'"];
 
-      // Full-text search using GIN index
-      if (query) {
-        whereClauses.push(`c.search_vector @@ plainto_tsquery('english', $${paramIndex})`);
-        params.push(query);
-        paramIndex++;
-      }
-
-      // Apply filters
-      if (filters.make) {
-        whereClauses.push(`c.make = $${paramIndex}`);
-        params.push(filters.make);
-        paramIndex++;
-      }
-
-      if (filters.model) {
-        whereClauses.push(`c.model = $${paramIndex}`);
-        params.push(filters.model);
-        paramIndex++;
-      }
-
-      if (filters.variant) {
-        whereClauses.push(`c.variant = $${paramIndex}`);
-        params.push(filters.variant);
-        paramIndex++;
-      }
-
-      if (filters.bodyType) {
-        whereClauses.push(`c.body_type = $${paramIndex}`);
-        params.push(filters.bodyType);
-        paramIndex++;
-      }
-
-      if (filters.fuelType) {
-        whereClauses.push(`c.fuel_type = $${paramIndex}`);
-        params.push(filters.fuelType);
-        paramIndex++;
-      }
-
-      if (filters.transmission) {
-        whereClauses.push(`c.transmission = $${paramIndex}`);
-        params.push(filters.transmission);
-        paramIndex++;
-      }
-
-      if (filters.condition) {
-        whereClauses.push(`c.condition = $${paramIndex}`);
-        params.push(filters.condition);
-        paramIndex++;
-      }
-
-      if (filters.minPrice !== undefined) {
-        whereClauses.push(`c.price >= $${paramIndex}`);
-        params.push(filters.minPrice);
-        paramIndex++;
-      }
-
-      if (filters.maxPrice !== undefined) {
-        whereClauses.push(`c.price <= $${paramIndex}`);
-        params.push(filters.maxPrice);
-        paramIndex++;
-      }
-
-      if (filters.minYear !== undefined) {
-        whereClauses.push(`c.year >= $${paramIndex}`);
-        params.push(filters.minYear);
-        paramIndex++;
-      }
-
-      if (filters.maxYear !== undefined) {
-        whereClauses.push(`c.year <= $${paramIndex}`);
-        params.push(filters.maxYear);
-        paramIndex++;
-      }
-
-      const whereClause = whereClauses.join(' AND ');
-
-      // Build ORDER BY (whitelist to prevent injection)
-      let orderBy = 'c.created_at DESC';
-      if (options.sortBy && options.sortBy !== 'relevance') {
-        const sortColumn = options.sortBy; // already validated by service
-        const sortDirection = options.sortOrder === 'desc' ? 'DESC' : 'ASC';
-        orderBy = `c.${sortColumn} ${sortDirection}`;
-      } else if (query) {
-        // Sort by relevance when query is present
-        orderBy = `ts_rank(c.search_vector, plainto_tsquery('english', $1)) DESC`;
-      }
-
-      // Count query
-      const countQuery = `SELECT COUNT(*) FROM cars c WHERE ${whereClause}`;
-      const countResult = await pool.query(countQuery, params);
-      const total = parseInt(countResult.rows[0].count, 10);
-
-      // Data query with LEFT JOIN to get primary image
-      const dataQuery = `
-        SELECT 
-          c.id, c.make, c.model, c.variant, c.year, c.price, c.mileage,
-          c.body_type, c.fuel_type, c.transmission, c.condition, c.color,
-          c.description, c.features, c.status, c.created_at,
-          ci.cloudfront_url as primary_image_url
-        FROM cars c
-        LEFT JOIN car_images ci ON c.id = ci.car_id AND ci.is_primary = true
-        WHERE ${whereClause}
-        ORDER BY ${orderBy}
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-      `;
-
-      params.push(options.limit, options.offset);
-
-      const dataResult = await pool.query(dataQuery, params);
-
-      return {
-        hits: dataResult.rows,
-        total
-      };
+    // Full-text search using GIN index
+    if (query) {
+      whereClauses.push(`c.search_vector @@ plainto_tsquery('english', $${paramIndex})`);
+      params.push(query);
+      paramIndex++;
     }
 
+    // Apply filters
+    if (filters.make) {
+      whereClauses.push(`c.make = $${paramIndex}`);
+      params.push(filters.make);
+      paramIndex++;
+    }
+
+    if (filters.model) {
+      whereClauses.push(`c.model = $${paramIndex}`);
+      params.push(filters.model);
+      paramIndex++;
+    }
+
+    if (filters.variant) {
+      whereClauses.push(`c.variant = $${paramIndex}`);
+      params.push(filters.variant);
+      paramIndex++;
+    }
+
+    if (filters.bodyType) {
+      whereClauses.push(`c.body_type = $${paramIndex}`);
+      params.push(filters.bodyType);
+      paramIndex++;
+    }
+
+    if (filters.fuelType) {
+      whereClauses.push(`c.fuel_type = $${paramIndex}`);
+      params.push(filters.fuelType);
+      paramIndex++;
+    }
+
+    if (filters.transmission) {
+      whereClauses.push(`c.transmission = $${paramIndex}`);
+      params.push(filters.transmission);
+      paramIndex++;
+    }
+
+    if (filters.condition) {
+      whereClauses.push(`c.condition = $${paramIndex}`);
+      params.push(filters.condition);
+      paramIndex++;
+    }
+
+    if (filters.minPrice !== undefined) {
+      whereClauses.push(`c.price >= $${paramIndex}`);
+      params.push(filters.minPrice);
+      paramIndex++;
+    }
+
+    if (filters.maxPrice !== undefined) {
+      whereClauses.push(`c.price <= $${paramIndex}`);
+      params.push(filters.maxPrice);
+      paramIndex++;
+    }
+
+    if (filters.minYear !== undefined) {
+      whereClauses.push(`c.year >= $${paramIndex}`);
+      params.push(filters.minYear);
+      paramIndex++;
+    }
+
+    if (filters.maxYear !== undefined) {
+      whereClauses.push(`c.year <= $${paramIndex}`);
+      params.push(filters.maxYear);
+      paramIndex++;
+    }
+
+    const whereClause = whereClauses.join(' AND ');
+
+    // Build ORDER BY (whitelist to prevent injection)
+    let orderBy = 'c.created_at DESC';
+    if (options.sortBy && options.sortBy !== 'relevance') {
+      const sortColumn = options.sortBy;
+      const sortDirection = options.sortOrder === 'desc' ? 'DESC' : 'ASC';
+      orderBy = `c.${sortColumn} ${sortDirection}`;
+    } else if (query) {
+      // Sort by relevance when query is present
+      orderBy = `ts_rank(c.search_vector, plainto_tsquery('english', $1)) DESC`;
+    }
+
+    // Count query
+    const countQuery = `SELECT COUNT(*) FROM cars c WHERE ${whereClause}`;
+    const countResult = await pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    // Data query with LEFT JOIN to get primary image
+    const dataQuery = `
+      SELECT 
+        c.id, c.make, c.model, c.variant, c.year, c.price, c.mileage,
+        c.body_type, c.fuel_type, c.transmission, c.condition, c.color,
+        c.description, c.features, c.status, c.created_at,
+        ci.cloudfront_url as primary_image_url
+      FROM cars c
+      LEFT JOIN car_images ci ON c.id = ci.car_id AND ci.is_primary = true
+      WHERE ${whereClause}
+      ORDER BY ${orderBy}
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+
+    params.push(options.limit, options.offset);
+
+    const dataResult = await pool.query(dataQuery, params);
+
+    return {
+      hits: dataResult.rows,
+      total
+    };
+  }
 
   /**
    * Find all active cars for reindexing
-   * Returns all required fields for search document transformation
-   * 
-   * @returns Array of all active car records
    */
   async findAllActive(): Promise<Car[]> {
     const pool = await getPool();

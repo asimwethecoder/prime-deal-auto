@@ -1,0 +1,21 @@
+{
+  "version": "50.0.0",
+  "files": {
+    "ecee5ff3ebde7bffe65bd80d1f684698701a543eb896e1fa3c04d69082de7d11": {
+      "displayName": "PrimeDeals-Database Template",
+      "source": {
+        "path": "PrimeDeals-Database.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "141814481613-us-east-1-45737f24": {
+          "bucketName": "cdk-hnb659fds-assets-141814481613-us-east-1",
+          "objectKey": "ecee5ff3ebde7bffe65bd80d1f684698701a543eb896e1fa3c04d69082de7d11.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::141814481613:role/cdk-hnb659fds-file-publishing-role-141814481613-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

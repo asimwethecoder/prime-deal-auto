@@ -1,8 +1,8 @@
 // Cars API Module
 // Functions for interacting with the cars endpoints
 
-import { get } from './client';
-import { Car, CarWithImages, PaginatedResponse, CarListParams } from './types';
+import { get, post, put, del } from './client';
+import { Car, CarWithImages, PaginatedResponse, CarListParams, CreateCarRequest } from './types';
 
 /**
  * Fetch a paginated list of cars
@@ -25,6 +25,34 @@ export async function getCars(
  */
 export async function getCar(carId: string): Promise<CarWithImages> {
   return get<CarWithImages>(`/cars/${carId}`);
+}
+
+/**
+ * Create a new car listing (admin only).
+ * @param data - Car payload (make, model, year, price, mileage, condition, transmission, fuel_type; optional variant, body_type, color, description, features, status)
+ * @returns Created car
+ */
+export async function createCar(data: CreateCarRequest): Promise<Car> {
+  return post<Car>('/cars', data);
+}
+
+/**
+ * Update an existing car listing (admin only).
+ * @param carId - The UUID of the car to update
+ * @param data - Partial car payload with fields to update
+ * @returns Updated car
+ */
+export async function updateCar(carId: string, data: Partial<CreateCarRequest>): Promise<Car> {
+  return put<Car>(`/cars/${carId}`, data);
+}
+
+/**
+ * Delete a car listing (soft delete, admin only).
+ * @param carId - The UUID of the car to delete
+ * @returns Delete result
+ */
+export async function deleteCar(carId: string): Promise<{ deleted: boolean; id: string }> {
+  return del<{ deleted: boolean; id: string }>(`/cars/${carId}`);
 }
 
 /**

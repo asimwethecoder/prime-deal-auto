@@ -6,19 +6,22 @@ import { ApiError, ApiResponse, ApiErrorResponse } from './types';
 /**
  * Base API URL from environment variable
  */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
   'https://urwy8bxz7g.execute-api.us-east-1.amazonaws.com/v1';
 
 /**
- * Get authentication token from storage (if available)
- * This will be implemented when auth is added
+ * Get authentication token from Amplify session (if signed in)
  */
-function getAuthToken(): string | null {
+async function getAuthToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
-  
-  // TODO: Implement auth token retrieval from Amplify/Zustand store
-  // For now, return null (no auth required for public endpoints)
-  return null;
+  try {
+    const { fetchAuthSession } = await import('aws-amplify/auth');
+    const session = await fetchAuthSession();
+    const idToken = session.tokens?.idToken?.toString();
+    return idToken ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -49,7 +52,7 @@ export async function fetchApi<T>(
   }
 
   // Add Authorization header if token exists
-  const token = getAuthToken();
+  const token = await getAuthToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }

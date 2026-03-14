@@ -1,0 +1,150 @@
+{
+ "Resources": {
+  "EncryptionPolicy": {
+   "Type": "AWS::OpenSearchServerless::SecurityPolicy",
+   "Properties": {
+    "Name": "primedeals-search-encryption",
+    "Policy": "{\"Rules\":[{\"ResourceType\":\"collection\",\"Resource\":[\"collection/primedeals-cars\"]}],\"AWSOwnedKey\":true}",
+    "Type": "encryption"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Search/EncryptionPolicy"
+   }
+  },
+  "NetworkPolicy": {
+   "Type": "AWS::OpenSearchServerless::SecurityPolicy",
+   "Properties": {
+    "Name": "primedeals-search-network",
+    "Policy": "[{\"Rules\":[{\"ResourceType\":\"collection\",\"Resource\":[\"collection/primedeals-cars\"]}],\"AllowFromPublic\":true}]",
+    "Type": "network"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Search/NetworkPolicy",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Public access required for development environment - will be restricted to VPC in production",
+       "id": "AwsSolutions-OS5"
+      }
+     ]
+    }
+   }
+  },
+  "SearchCollection": {
+   "Type": "AWS::OpenSearchServerless::Collection",
+   "Properties": {
+    "Description": "Search collection for Prime Deal Auto car inventory",
+    "Name": "primedeals-cars",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "Type": "SEARCH"
+   },
+   "DependsOn": [
+    "EncryptionPolicy",
+    "NetworkPolicy"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Search/SearchCollection"
+   }
+  },
+  "DataAccessPolicy": {
+   "Type": "AWS::OpenSearchServerless::AccessPolicy",
+   "Properties": {
+    "Name": "primedeals-search-access",
+    "Policy": {
+     "Fn::Join": [
+      "",
+      [
+       "[{\"Rules\":[{\"ResourceType\":\"collection\",\"Resource\":[\"collection/primedeals-cars\"],\"Permission\":[\"aoss:*\"]},{\"ResourceType\":\"index\",\"Resource\":[\"index/primedeals-cars/*\"],\"Permission\":[\"aoss:*\"]}],\"Principal\":[\"",
+       {
+        "Fn::ImportValue": "PrimeDeals-Api:ExportsOutputFnGetAttApiHandlerServiceRole592E70E9Arn5480EF3D"
+       },
+       "\"]}]"
+      ]
+     ]
+    },
+    "Type": "data"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Search/DataAccessPolicy"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/yWJQQqDMBAA3+I9btPgB0oe0FIfIOm60tU0kWyiiPj3Ip6GmTFgGg26cqvU2E+15w/sbXY4KbdKF2cKQi7hVygtlDyJwG6H0BKWxHl7Rc+4KTsEG70nzBzDaQ9EErnucYZnyXPJhwqxJxjltpgG7gZ0NQpznUrI/CN4X/wDxi0JWZYAAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Search/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "CollectionEndpoint": {
+   "Description": "OpenSearch Serverless collection endpoint",
+   "Value": {
+    "Fn::GetAtt": [
+     "SearchCollection",
+     "CollectionEndpoint"
+    ]
+   },
+   "Export": {
+    "Name": "SearchCollectionEndpoint"
+   }
+  },
+  "CollectionArn": {
+   "Description": "OpenSearch Serverless collection ARN",
+   "Value": {
+    "Fn::GetAtt": [
+     "SearchCollection",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "SearchCollectionArn"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

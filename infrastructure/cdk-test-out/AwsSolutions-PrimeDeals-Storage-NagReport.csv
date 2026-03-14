@@ -1,0 +1,12 @@
+Rule ID,Resource ID,Compliance,Exception Reason,Rule Level,Rule Info
+"AwsSolutions-S1","PrimeDeals-Storage/CarImagesBucket/Resource","Suppressed","S3 access logging deferred to MonitoringStack (Spec 12)","Error","The S3 Bucket has server access logs disabled."
+"AwsSolutions-S2","PrimeDeals-Storage/CarImagesBucket/Resource","Compliant","N/A","Error","The S3 Bucket does not have public access restricted and blocked."
+"AwsSolutions-S5","PrimeDeals-Storage/CarImagesBucket/Resource","Compliant","N/A","Error","The S3 static website bucket either has an open world bucket policy or does not use a CloudFront Origin Access Identity (OAI) in the bucket policy for limited getObject and/or putObject permissions."
+"AwsSolutions-S10","PrimeDeals-Storage/CarImagesBucket/Resource","Compliant","N/A","Error","The S3 Bucket or bucket policy does not require requests to use SSL."
+"AwsSolutions-S10","PrimeDeals-Storage/CarImagesBucket/Policy/Resource","Compliant","N/A","Error","The S3 Bucket or bucket policy does not require requests to use SSL."
+"AwsSolutions-CFR1","PrimeDeals-Storage/Distribution/Resource","Suppressed","Geo restrictions not required for car dealership serving South Africa","Warning","The CloudFront distribution may require Geo restrictions."
+"AwsSolutions-CFR2","PrimeDeals-Storage/Distribution/Resource","Suppressed","WAF integration deferred to production hardening (Spec 14)","Warning","The CloudFront distribution may require integration with AWS WAF."
+"AwsSolutions-CFR3","PrimeDeals-Storage/Distribution/Resource","Suppressed","CloudFront access logging deferred to MonitoringStack (Spec 12)","Error","The CloudFront distribution does not have access logging enabled."
+"AwsSolutions-CFR4","PrimeDeals-Storage/Distribution/Resource","Suppressed","Custom SSL certificate deferred - using CloudFront default certificate for dev","Error","The CloudFront distribution allows for SSLv3 or TLSv1 for HTTPS viewer connections."
+"AwsSolutions-CFR5","PrimeDeals-Storage/Distribution/Resource","Compliant","N/A","Error","The CloudFront distributions uses SSLv3 or TLSv1 for communication to the origin."
+"AwsSolutions-CFR7","PrimeDeals-Storage/Distribution/Resource","Compliant","N/A","Error","The CloudFront distribution does not use an origin access control with an S3 origin."

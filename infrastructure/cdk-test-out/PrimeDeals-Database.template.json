@@ -1,0 +1,941 @@
+{
+ "Metadata": {
+  "cdk_nag": {
+   "rules_to_suppress": [
+    {
+     "reason": "VPC Flow Logs deferred to MonitoringStack (Spec 12) to keep this stack focused",
+     "id": "AwsSolutions-VPC7"
+    },
+    {
+     "reason": "SUFNIGF1dGggbm90IGVuYWJsZWQg4oCUIHVzaW5nIFNlY3JldHMgTWFuYWdlciBjcmVkZW50aWFscyB2aWEgUkRTIFByb3h5IHdoaWNoIGlzIHNpbXBsZXIgYW5kIHN1ZmZpY2llbnQgZm9yIHRoaXMgYXJjaGl0ZWN0dXJl",
+     "id": "AwsSolutions-RDS6",
+     "is_reason_encoded": true
+    },
+    {
+     "reason": "RGVsZXRpb24gcHJvdGVjdGlvbiBkaXNhYmxlZCBmb3IgZGV2IGVudmlyb25tZW50IOKAlCBtdXN0IGJlIGVuYWJsZWQgYmVmb3JlIHByb2R1Y3Rpb24gZGVwbG95bWVudA==",
+     "id": "AwsSolutions-RDS10",
+     "is_reason_encoded": true
+    },
+    {
+     "reason": "Aurora backtrack is not supported on Aurora PostgreSQL, only Aurora MySQL",
+     "id": "AwsSolutions-RDS14"
+    },
+    {
+     "reason": "Secret rotation deferred to production hardening phase (Spec 14)",
+     "id": "AwsSolutions-SMG4"
+    },
+    {
+     "reason": "QXdzU29sdXRpb25zLUVDMjMgY2Fubm90IHJlc29sdmUgVlBDIENJRFIgaW50cmluc2ljIGZ1bmN0aW9uIOKAlCBWUEMgZW5kcG9pbnQgU0cgaXMgc2NvcGVkIHRvIFZQQyBDSURSIHdoaWNoIGlzIHNlY3VyZQ==",
+     "id": "CdkNagValidationFailure",
+     "is_reason_encoded": true
+    }
+   ]
+  }
+ },
+ "Resources": {
+  "Vpc8378EB38": {
+   "Type": "AWS::EC2::VPC",
+   "Properties": {
+    "CidrBlock": "10.0.0.0/16",
+    "EnableDnsHostnames": true,
+    "EnableDnsSupport": true,
+    "InstanceTenancy": "default",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Name",
+      "Value": "PrimeDeals-Database/Vpc"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/Vpc/Resource"
+   }
+  },
+  "VpcisolatedSubnet1SubnetE62B1B9B": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1a",
+    "CidrBlock": "10.0.0.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "isolated"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Isolated"
+     },
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Name",
+      "Value": "PrimeDeals-Database/Vpc/isolatedSubnet1"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/Vpc/isolatedSubnet1/Subnet"
+   }
+  },
+  "VpcisolatedSubnet1RouteTableE442650B": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Name",
+      "Value": "PrimeDeals-Database/Vpc/isolatedSubnet1"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/Vpc/isolatedSubnet1/RouteTable"
+   }
+  },
+  "VpcisolatedSubnet1RouteTableAssociationD259E31A": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcisolatedSubnet1RouteTableE442650B"
+    },
+    "SubnetId": {
+     "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/Vpc/isolatedSubnet1/RouteTableAssociation"
+   }
+  },
+  "VpcisolatedSubnet2Subnet39217055": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1b",
+    "CidrBlock": "10.0.1.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "isolated"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Isolated"
+     },
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Name",
+      "Value": "PrimeDeals-Database/Vpc/isolatedSubnet2"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/Vpc/isolatedSubnet2/Subnet"
+   }
+  },
+  "VpcisolatedSubnet2RouteTable334F9764": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Name",
+      "Value": "PrimeDeals-Database/Vpc/isolatedSubnet2"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/Vpc/isolatedSubnet2/RouteTable"
+   }
+  },
+  "VpcisolatedSubnet2RouteTableAssociation25A4716F": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcisolatedSubnet2RouteTable334F9764"
+    },
+    "SubnetId": {
+     "Ref": "VpcisolatedSubnet2Subnet39217055"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/Vpc/isolatedSubnet2/RouteTableAssociation"
+   }
+  },
+  "VpcSecretsManagerEndpointSecurityGroup9A5498C7": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "PrimeDeals-Database/Vpc/SecretsManagerEndpoint/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": {
+       "Fn::GetAtt": [
+        "Vpc8378EB38",
+        "CidrBlock"
+       ]
+      },
+      "Description": {
+       "Fn::Join": [
+        "",
+        [
+         "from ",
+         {
+          "Fn::GetAtt": [
+           "Vpc8378EB38",
+           "CidrBlock"
+          ]
+         },
+         ":443"
+        ]
+       ]
+      },
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Name",
+      "Value": "PrimeDeals-Database/Vpc"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/Vpc/SecretsManagerEndpoint/SecurityGroup/Resource"
+   }
+  },
+  "VpcSecretsManagerEndpoint93E49F69": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "VpcSecretsManagerEndpointSecurityGroup9A5498C7",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": "com.amazonaws.us-east-1.secretsmanager",
+    "SubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Name",
+      "Value": "PrimeDeals-Database/Vpc"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/Vpc/SecretsManagerEndpoint/Resource"
+   }
+  },
+  "AuroraSecurityGroup75F699F6": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for Aurora PostgreSQL cluster - allows port 5432 from RDS Proxy only",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/AuroraSecurityGroup/Resource"
+   }
+  },
+  "AuroraSecurityGroupfromPrimeDealsDatabaseProxySecurityGroup8923EB425432B35C8BB4": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow PostgreSQL from RDS Proxy",
+    "FromPort": 5432,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "AuroraSecurityGroup75F699F6",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "ProxySecurityGroup6DC814C1",
+      "GroupId"
+     ]
+    },
+    "ToPort": 5432
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/AuroraSecurityGroup/from PrimeDealsDatabaseProxySecurityGroup8923EB42:5432"
+   }
+  },
+  "AuroraSecurityGroupfromPrimeDealsDatabaseProxySecurityGroup8923EB42IndirectPortBD1B7075": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow connections to the database Cluster from the Proxy",
+    "FromPort": {
+     "Fn::GetAtt": [
+      "AuroraCluster23D869C0",
+      "Endpoint.Port"
+     ]
+    },
+    "GroupId": {
+     "Fn::GetAtt": [
+      "AuroraSecurityGroup75F699F6",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "ProxySecurityGroup6DC814C1",
+      "GroupId"
+     ]
+    },
+    "ToPort": {
+     "Fn::GetAtt": [
+      "AuroraCluster23D869C0",
+      "Endpoint.Port"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/AuroraSecurityGroup/from PrimeDealsDatabaseProxySecurityGroup8923EB42:{IndirectPort}"
+   }
+  },
+  "ProxySecurityGroup6DC814C1": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for RDS Proxy - allows port 5432 inbound from Lambda",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/ProxySecurityGroup/Resource"
+   }
+  },
+  "ProxySecurityGrouptoPrimeDealsDatabaseAuroraSecurityGroup5642B2375432367BBADC": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "Allow outbound to Aurora",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AuroraSecurityGroup75F699F6",
+      "GroupId"
+     ]
+    },
+    "FromPort": 5432,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ProxySecurityGroup6DC814C1",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": 5432
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/ProxySecurityGroup/to PrimeDealsDatabaseAuroraSecurityGroup5642B237:5432"
+   }
+  },
+  "ProxySecurityGrouptoPrimeDealsDatabaseAuroraSecurityGroup5642B237IndirectPort19B5E8AA": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "Allow connections to the database Cluster from the Proxy",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AuroraSecurityGroup75F699F6",
+      "GroupId"
+     ]
+    },
+    "FromPort": {
+     "Fn::GetAtt": [
+      "AuroraCluster23D869C0",
+      "Endpoint.Port"
+     ]
+    },
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ProxySecurityGroup6DC814C1",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": {
+     "Fn::GetAtt": [
+      "AuroraCluster23D869C0",
+      "Endpoint.Port"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/ProxySecurityGroup/to PrimeDealsDatabaseAuroraSecurityGroup5642B237:{IndirectPort}"
+   }
+  },
+  "AuroraClusterSubnetsF3E9E6AD": {
+   "Type": "AWS::RDS::DBSubnetGroup",
+   "Properties": {
+    "DBSubnetGroupDescription": "Subnets for AuroraCluster database",
+    "SubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/AuroraCluster/Subnets/Default"
+   }
+  },
+  "PrimeDealsDatabaseAuroraClusterSecret8AC055A33fdaad7efa858a3daf9490cf0a702aeb": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": {
+     "Fn::Join": [
+      "",
+      [
+       "Generated by the CDK for stack: ",
+       {
+        "Ref": "AWS::StackName"
+       }
+      ]
+     ]
+    },
+    "GenerateSecretString": {
+     "ExcludeCharacters": " %+~`#$&*()|[]{}:;<>?!'/@\"\\",
+     "GenerateStringKey": "password",
+     "PasswordLength": 30,
+     "SecretStringTemplate": "{\"username\":\"postgres\"}"
+    },
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/AuroraCluster/Secret/Resource"
+   }
+  },
+  "AuroraClusterSecretAttachmentDB8032DA": {
+   "Type": "AWS::SecretsManager::SecretTargetAttachment",
+   "Properties": {
+    "SecretId": {
+     "Ref": "PrimeDealsDatabaseAuroraClusterSecret8AC055A33fdaad7efa858a3daf9490cf0a702aeb"
+    },
+    "TargetId": {
+     "Ref": "AuroraCluster23D869C0"
+    },
+    "TargetType": "AWS::RDS::DBCluster"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/AuroraCluster/Secret/Attachment/Resource"
+   }
+  },
+  "AuroraCluster23D869C0": {
+   "Type": "AWS::RDS::DBCluster",
+   "Properties": {
+    "CopyTagsToSnapshot": true,
+    "DBClusterParameterGroupName": "default.aurora-postgresql15",
+    "DBSubnetGroupName": {
+     "Ref": "AuroraClusterSubnetsF3E9E6AD"
+    },
+    "DatabaseName": "primedealauto",
+    "DeletionProtection": false,
+    "EnableHttpEndpoint": true,
+    "Engine": "aurora-postgresql",
+    "EngineVersion": "15.15",
+    "MasterUserPassword": {
+     "Fn::Join": [
+      "",
+      [
+       "{{resolve:secretsmanager:",
+       {
+        "Ref": "PrimeDealsDatabaseAuroraClusterSecret8AC055A33fdaad7efa858a3daf9490cf0a702aeb"
+       },
+       ":SecretString:password::}}"
+      ]
+     ]
+    },
+    "MasterUsername": "postgres",
+    "Port": 5432,
+    "ServerlessV2ScalingConfiguration": {
+     "MaxCapacity": 4,
+     "MinCapacity": 0.5
+    },
+    "StorageEncrypted": true,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcSecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "AuroraSecurityGroup75F699F6",
+       "GroupId"
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/AuroraCluster/Resource"
+   }
+  },
+  "AuroraClusterwriter499C523E": {
+   "Type": "AWS::RDS::DBInstance",
+   "Properties": {
+    "DBClusterIdentifier": {
+     "Ref": "AuroraCluster23D869C0"
+    },
+    "DBInstanceClass": "db.serverless",
+    "Engine": "aurora-postgresql",
+    "PromotionTier": 0,
+    "PubliclyAccessible": false,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/AuroraCluster/writer/Resource"
+   }
+  },
+  "RdsProxyIAMRoleC275BF0F": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "rds.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/RdsProxy/IAMRole/Resource"
+   }
+  },
+  "RdsProxyIAMRoleDefaultPolicy82D221E7": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "AuroraClusterSecretAttachmentDB8032DA"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "RdsProxyIAMRoleDefaultPolicy82D221E7",
+    "Roles": [
+     {
+      "Ref": "RdsProxyIAMRoleC275BF0F"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/RdsProxy/IAMRole/DefaultPolicy/Resource"
+   }
+  },
+  "RdsProxyE8EC09E1": {
+   "Type": "AWS::RDS::DBProxy",
+   "Properties": {
+    "Auth": [
+     {
+      "AuthScheme": "SECRETS",
+      "IAMAuth": "DISABLED",
+      "SecretArn": {
+       "Ref": "AuroraClusterSecretAttachmentDB8032DA"
+      }
+     }
+    ],
+    "DBProxyName": "RdsProxy",
+    "EngineFamily": "POSTGRESQL",
+    "RequireTLS": true,
+    "RoleArn": {
+     "Fn::GetAtt": [
+      "RdsProxyIAMRoleC275BF0F",
+      "Arn"
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "Project",
+      "Value": "PrimeDealAuto"
+     }
+    ],
+    "VpcSecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "ProxySecurityGroup6DC814C1",
+       "GroupId"
+      ]
+     }
+    ],
+    "VpcSubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/RdsProxy/Resource"
+   }
+  },
+  "RdsProxyProxyTargetGroupD847F6F0": {
+   "Type": "AWS::RDS::DBProxyTargetGroup",
+   "Properties": {
+    "ConnectionPoolConfigurationInfo": {},
+    "DBClusterIdentifiers": [
+     {
+      "Ref": "AuroraCluster23D869C0"
+     }
+    ],
+    "DBProxyName": {
+     "Ref": "RdsProxyE8EC09E1"
+    },
+    "TargetGroupName": "default"
+   },
+   "DependsOn": [
+    "AuroraCluster23D869C0",
+    "AuroraClusterwriter499C523E"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/RdsProxy/ProxyTargetGroup"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/22Q3W7CMAyFn4X7kLGKF4CCpl6talFvJzc1LNAmVezAUNV3n0hGmdiu7Hw+Of5JZLJcyMUMLjRXzWne6loOJYM6CbjQx4AqkUPVK5HuTZWnInf6DIylrw3yDT6ywnrGHdQtPviDrYis0sDaGpEZRrcHhVWvtqbprTYsSlTeab6+Oev74PAMqjyd1M/1zBwcEv3h24BH4RqSwwYYaiBMW0+MTsQZJ//N+je4i0tULi64Wd8/hkdmiMEonJS5s1/XWHtOd+AOP8ajoOBIHRg4oJNDnPnWJIYoXjGD+uxwWvafyig0dHIobLx5iLlttQq9YzaOokCy3qmgeffcex6FsQ3KI72ck6V8TeRidiSt584b1h3KIsZvRjJjSB4CAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "PrimeDeals-Database/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ClusterEndpoint": {
+   "Description": "Aurora cluster writer endpoint",
+   "Value": {
+    "Fn::GetAtt": [
+     "AuroraCluster23D869C0",
+     "Endpoint.Address"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database-ClusterEndpoint"
+   }
+  },
+  "SecretArn": {
+   "Description": "Secrets Manager secret ARN for Aurora credentials",
+   "Value": {
+    "Ref": "AuroraClusterSecretAttachmentDB8032DA"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database-SecretArn"
+   }
+  },
+  "VpcId": {
+   "Description": "VPC ID",
+   "Value": {
+    "Ref": "Vpc8378EB38"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database-VpcId"
+   }
+  },
+  "RdsProxyEndpoint": {
+   "Description": "RDS Proxy endpoint — use as DB_HOST in Lambda",
+   "Value": {
+    "Fn::GetAtt": [
+     "RdsProxyE8EC09E1",
+     "Endpoint"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database-RdsProxyEndpoint"
+   }
+  },
+  "ProxySecurityGroupId": {
+   "Description": "RDS Proxy security group ID",
+   "Value": {
+    "Fn::GetAtt": [
+     "ProxySecurityGroup6DC814C1",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database-ProxySecurityGroupId"
+   }
+  },
+  "ExportsOutputFnGetAttAuroraSecurityGroup75F699F6GroupId12D936A9": {
+   "Description": "Aurora SG ID (legacy; remove after ApiStack migration)",
+   "Value": {
+    "Fn::GetAtt": [
+     "AuroraSecurityGroup75F699F6",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database:ExportsOutputFnGetAttAuroraSecurityGroup75F699F6GroupId12D936A9"
+   }
+  },
+  "ExportsOutputRefVpc8378EB38272D6E3A": {
+   "Value": {
+    "Ref": "Vpc8378EB38"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database:ExportsOutputRefVpc8378EB38272D6E3A"
+   }
+  },
+  "ExportsOutputRefAuroraClusterSecretAttachmentDB8032DAFDEEBE73": {
+   "Value": {
+    "Ref": "AuroraClusterSecretAttachmentDB8032DA"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database:ExportsOutputRefAuroraClusterSecretAttachmentDB8032DAFDEEBE73"
+   }
+  },
+  "ExportsOutputFnGetAttRdsProxyE8EC09E1EndpointD77E918E": {
+   "Value": {
+    "Fn::GetAtt": [
+     "RdsProxyE8EC09E1",
+     "Endpoint"
+    ]
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database:ExportsOutputFnGetAttRdsProxyE8EC09E1EndpointD77E918E"
+   }
+  },
+  "ExportsOutputRefVpcisolatedSubnet1SubnetE62B1B9BEE029908": {
+   "Value": {
+    "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database:ExportsOutputRefVpcisolatedSubnet1SubnetE62B1B9BEE029908"
+   }
+  },
+  "ExportsOutputRefVpcisolatedSubnet2Subnet392170557C27A199": {
+   "Value": {
+    "Ref": "VpcisolatedSubnet2Subnet39217055"
+   },
+   "Export": {
+    "Name": "PrimeDeals-Database:ExportsOutputRefVpcisolatedSubnet2Subnet392170557C27A199"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

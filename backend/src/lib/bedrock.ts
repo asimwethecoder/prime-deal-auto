@@ -167,7 +167,10 @@ export async function converse(params: {
 }): Promise<ConverseResponse> {
   const client = getBedrockClient();
   
-  const modelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-sonnet-4-20250514-v1:0';
+  // Use Amazon Nova Pro - no access restrictions, good tool use support
+  // Claude Sonnet 4 requires Anthropic use case form submission (not yet approved)
+  // See .kiro/steering/bedrock-model-selection.md for rationale
+  const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-pro-v1:0';
 
   const input: ConverseCommandInput = {
     modelId,

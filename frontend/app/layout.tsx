@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { DM_Sans, Bebas_Neue } from 'next/font/google';
 import { Providers } from './providers';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { ConditionalSiteLayout } from '@/components/layout/ConditionalSiteLayout';
 import './globals.css';
 
 // Load DM Sans font with next/font for optimization
@@ -61,11 +60,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${dmSans.variable} ${bebasNeue.variable} font-sans antialiased flex flex-col min-h-screen`}>
         <Providers>
-          <Header />
-          <main className="flex-1">
-            {children}
-          </main>
-          <Footer />
+          <ConditionalSiteLayout>{children}</ConditionalSiteLayout>
         </Providers>
       </body>
     </html>

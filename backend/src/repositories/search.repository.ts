@@ -144,26 +144,39 @@ export class SearchRepository {
    * Execute prefix query for autocomplete suggestions
    * 
    * @param field - Field to search (make, model, or variant)
-   * @param prefix - Prefix string to match
+   * @param prefix - Prefix string to match (empty string for all values)
+   * @param filters - Optional filters for cascading dropdowns
    * @returns Array of unique suggestions (max 10)
    * @throws OpenSearchError if suggestion query fails
    */
   async getSuggestions(
     field: 'make' | 'model' | 'variant',
-    prefix: string
+    prefix: string,
+    filters?: { make?: string; model?: string }
   ): Promise<string[]> {
     const client = getOpenSearchClient();
+
+    const must: any[] = [{ term: { status: 'active' } }];
+    
+    // Add prefix match if provided
+    if (prefix) {
+      must.push({ prefix: { [`${field}.keyword`]: prefix.toLowerCase() } });
+    }
+    
+    // Add cascading filters
+    if (filters?.make && field !== 'make') {
+      must.push({ term: { 'make.keyword': filters.make } });
+    }
+    
+    if (filters?.model && field === 'variant') {
+      must.push({ term: { 'model.keyword': filters.model } });
+    }
 
     const body = {
       size: 10,
       _source: [field],
       query: {
-        bool: {
-          must: [
-            { prefix: { [`${field}.keyword`]: prefix.toLowerCase() } },
-            { term: { status: 'active' } }
-          ]
-        }
+        bool: { must }
       },
       collapse: { field: `${field}.keyword` },
       sort: [{ _score: { order: 'desc' as const } }]
@@ -175,7 +188,9 @@ export class SearchRepository {
         body: body as any
       });
 
-      return response.body.hits.hits.map((hit: any) => hit._source[field]);
+      return response.body.hits.hits
+        .map((hit: any) => hit._source[field])
+        .filter((value: string) => value && value.trim()); // Filter out empty values
     } catch (error) {
       throw new OpenSearchError('Suggestion query failed', undefined, error);
     }

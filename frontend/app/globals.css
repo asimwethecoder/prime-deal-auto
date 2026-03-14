@@ -19,3 +19,142 @@
     flex: 1 1 auto;
   }
 }
+
+/* ============================================
+   Chat Widget Animations
+   ============================================ */
+
+/* Chat window slide up animation */
+@keyframes chat-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Chat window slide down animation (for closing) */
+@keyframes chat-slide-down {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+}
+
+/* Message fade in animation */
+@keyframes message-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Typing indicator bounce animation */
+@keyframes typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Shimmer animation for loading skeletons */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Animation utility classes */
+@layer utilities {
+  .animate-chat-slide-up {
+    animation: chat-slide-up 200ms ease-out forwards;
+  }
+
+  .animate-chat-slide-down {
+    animation: chat-slide-down 200ms ease-in forwards;
+  }
+
+  .animate-message-fade-in {
+    animation: message-fade-in 200ms ease-out forwards;
+  }
+
+  .animate-typing-dot {
+    animation: typing-bounce 1.4s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      #f0f0f0 25%,
+      #e0e0e0 50%,
+      #f0f0f0 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+}
+
+/* Contact page: react-phone-number-input overrides to match UI kit */
+.PhoneInput {
+  --PhoneInputCountryFlagHeight: 1em;
+  --PhoneInputCountryFlagBorderColor: #E1E1E1;
+  --PhoneInputCountrySelectArrowColor: #050B20;
+}
+.PhoneInputCountrySelect {
+  padding-left: 12px;
+  padding-right: 8px;
+  border-right: 1px solid #E1E1E1;
+  border-radius: 12px 0 0 12px;
+  min-height: 48px;
+  background: white;
+  color: #050B20;
+}
+.PhoneInputCountrySelect:focus {
+  outline: none;
+}
+.PhoneInputCountrySelectArrow {
+  opacity: 0.7;
+}
+.PhoneInputInput {
+  border: none !important;
+  border-radius: 0 12px 12px 0 !important;
+}
+.PhoneInput:focus-within .PhoneInputCountrySelect {
+  border-color: #405FF2;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-chat-slide-up,
+  .animate-chat-slide-down,
+  .animate-message-fade-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .animate-typing-dot {
+    animation: none;
+  }
+
+  .animate-shimmer {
+    animation: none;
+    background: #f0f0f0;
+  }
+}

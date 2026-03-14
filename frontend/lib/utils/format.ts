@@ -11,6 +11,9 @@ export function formatPrice(price: number): string {
   return `R${price.toLocaleString('en-ZA')}`;
 }
 
+/** Alias for formatPrice — format value as South African Rand (ZAR). */
+export const formatToZAR = formatPrice;
+
 /**
  * Format mileage in kilometers with thousand separators
  * 

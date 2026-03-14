@@ -5,11 +5,15 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getFeaturedCars, getCars } from '@/lib/api/cars';
+import { getSearchFacets, type FacetResult } from '@/lib/api/search';
+import type { CarWithImages } from '@/lib/api/types';
 import { HeroCarousel } from '@/components/home/HeroCarousel';
 import { BrandCarousel } from '@/components/home/BrandCarousel';
+import { ExploreAllVehiclesSection } from '@/components/home/ExploreAllVehiclesSection';
+import { PopularMakesSection } from '@/components/home/PopularMakesSection';
 import { CarCard } from '@/components/cars/CarCard';
 import { CarCardSkeleton } from '@/components/cars/CarCardSkeleton';
-import { HeroSearch } from '@/components/home/HeroSearch';
+import { EnhancedHeroSearch } from '@/components/home/EnhancedHeroSearch';
 import {
   Tag,
   Gem,
@@ -26,6 +30,9 @@ import { RetryButton } from '@/components/ui/RetryButton';
 // Enable ISR with 60 second revalidation
 export const revalidate = 60;
 
+/** Set to true to show the Featured Cars section on the homepage */
+const SHOW_FEATURED_CARS = false;
+
 // Page metadata
 export const metadata: Metadata = {
   title: 'Home',
@@ -37,13 +44,20 @@ export default async function HomePage() {
   let error: string | null = null;
   let carCount = 0;
 
+  let exploreCars: CarWithImages[] = [];
+  let facets: FacetResult = {};
+
   try {
-    const [featured, countRes] = await Promise.all([
+    const [featured, countRes, exploreRes, facetsRes] = await Promise.all([
       getFeaturedCars(),
       getCars({ limit: 1 }),
+      getCars({ limit: 13 }),
+      getSearchFacets().catch(() => ({})),
     ]);
     featuredCars = featured;
     carCount = countRes.total;
+    exploreCars = exploreRes.data ?? [];
+    facets = facetsRes ?? {};
   } catch (err) {
     console.error('Failed to fetch featured cars:', err);
     featuredCars = [];
@@ -69,13 +83,13 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="w-full max-w-[1400px] mx-auto flex justify-center">
-            <HeroSearch totalCount={carCount} />
+            <EnhancedHeroSearch totalCount={carCount} />
           </div>
         </div>
       </section>
 
       {/* White container: subtle curve overlap, Premium Brands right after hero */}
-      <section className="relative z-10 -mt-16 pt-16 pb-16 bg-white rounded-t-[80px]">
+      <section className="relative z-10 -mt-16 pt-16 pb-16 bg-[#F9FBFC] rounded-t-[80px]">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <h2 className="text-[40px] leading-[45px] font-bold text-primary">
@@ -93,60 +107,68 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured Cars Section */}
-      <section className="py-16">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl sm:text-4xl font-bold text-primary">
-              Featured Cars
-            </h2>
-            <Link
-              href="/cars"
-              className="text-secondary hover:text-secondary/80 font-medium transition-colors"
-            >
-              View All →
-            </Link>
+      {/* Explore All Vehicles */}
+      <ExploreAllVehiclesSection cars={exploreCars} />
+
+      {/* Popular Makes - dark section, make tabs, car slider */}
+      <PopularMakesSection facets={facets} />
+
+      {/* Featured Cars Section - hidden; set SHOW_FEATURED_CARS to true to show */}
+      {SHOW_FEATURED_CARS && (
+        <section className="py-16">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl sm:text-4xl font-bold text-primary">
+                Featured Cars
+              </h2>
+              <Link
+                href="/cars"
+                className="text-secondary hover:text-secondary/80 font-medium transition-colors"
+              >
+                View All →
+              </Link>
+            </div>
+
+            {/* Error State */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-card p-6 text-center">
+                <p className="text-red-600 mb-4">{error}</p>
+                <RetryButton />
+              </div>
+            )}
+
+            {/* Loading State (shown during build/revalidation) */}
+            {!featuredCars && !error && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <CarCardSkeleton key={i} />
+                ))}
+              </div>
+            )}
+
+            {/* Featured Cars Grid */}
+            {featuredCars && featuredCars.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuredCars.map((car) => (
+                  <CarCard key={car.id} car={car} />
+                ))}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {featuredCars && featuredCars.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-600 text-lg mb-4">
+                  No cars available at the moment.
+                </p>
+                <p className="text-gray-500">
+                  Check back soon for new arrivals!
+                </p>
+              </div>
+            )}
           </div>
-
-          {/* Error State */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-card p-6 text-center">
-              <p className="text-red-600 mb-4">{error}</p>
-              <RetryButton />
-            </div>
-          )}
-
-          {/* Loading State (shown during build/revalidation) */}
-          {!featuredCars && !error && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <CarCardSkeleton key={i} />
-              ))}
-            </div>
-          )}
-
-          {/* Featured Cars Grid */}
-          {featuredCars && featuredCars.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredCars.map((car) => (
-                <CarCard key={car.id} car={car} />
-              ))}
-            </div>
-          )}
-
-          {/* Empty State */}
-          {featuredCars && featuredCars.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-600 text-lg mb-4">
-                No cars available at the moment.
-              </p>
-              <p className="text-gray-500">
-                Check back soon for new arrivals!
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Customer Reviews Section */}
       <section className="py-16 bg-[#F9FBFC]">

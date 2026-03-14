@@ -30,11 +30,10 @@ const authStack = new AuthStack(app, 'PrimeDeals-Auth', { env });
 const databaseStack = new DatabaseStack(app, 'PrimeDeals-Database', { env });
 
 // Spec 3: Storage + API stacks
-// TEMPORARY: CloudFront disabled - waiting for AWS account verification
-// TODO: Change enableCloudFront to true once approved (ticket raised 2026-02-28)
+// CloudFront testing: AWS Support says issue is resolved, testing access
 const storageStack = new StorageStack(app, 'PrimeDeals-Storage', { 
   env,
-  enableCloudFront: false, // Set to true once CloudFront approved
+  enableCloudFront: true, // Testing if CloudFront access is now working
 });
 
 const apiStack = new ApiStack(app, 'PrimeDeals-Api', {

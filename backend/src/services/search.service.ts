@@ -142,30 +142,38 @@ export class SearchService {
    * Get autocomplete suggestions for a field
    * 
    * @param field - Field to search (make, model, or variant)
-   * @param prefix - Prefix string to match (minimum 2 characters)
+   * @param prefix - Prefix string to match (empty string for all values)
+   * @param filters - Optional filters for cascading dropdowns
    * @returns Array of unique suggestions (max 10)
    * @throws ValidationError if field or prefix is invalid
    */
-  async getSuggestions(field: string, prefix: string): Promise<string[]> {
+  async getSuggestions(
+    field: string, 
+    prefix: string, 
+    filters?: { make?: string; model?: string }
+  ): Promise<string[]> {
     if (!['make', 'model', 'variant'].includes(field)) {
       throw new ValidationError('Invalid field parameter. Must be make, model, or variant');
     }
     
-    if (!prefix || prefix.length < 2) {
-      throw new ValidationError('Prefix must be at least 2 characters');
+    // Allow empty prefix for getting all values (cascading dropdowns)
+    if (prefix.length > 0 && prefix.length < 2) {
+      throw new ValidationError('Prefix must be at least 2 characters or empty');
     }
     
     try {
       return await this.searchRepository.getSuggestions(
         field as 'make' | 'model' | 'variant',
-        prefix
+        prefix,
+        filters
       );
     } catch (error) {
       if (error instanceof OpenSearchError) {
         console.warn('OpenSearch unavailable for suggestions, returning empty array', {
           error: error.message,
           field,
-          prefix
+          prefix,
+          filters
         });
         return [];
       }

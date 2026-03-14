@@ -128,7 +128,9 @@ export async function handleFacets(
  * 
  * Query parameters:
  * - field: field to search (make, model, or variant) - REQUIRED
- * - q: prefix query text (minimum 2 characters) - REQUIRED
+ * - q: prefix query text (minimum 2 characters for text search, empty for all values) - REQUIRED
+ * - make: filter by make (for model and variant suggestions) - OPTIONAL
+ * - model: filter by model (for variant suggestions) - OPTIONAL
  * 
  * Returns: Array of up to 10 suggestions ordered by relevance
  * 
@@ -140,7 +142,7 @@ export async function handleSuggestions(
   try {
     const params = event.queryStringParameters || {};
     
-    if (!params.field || !params.q) {
+    if (!params.field || params.q === undefined) {
       return {
         statusCode: 400,
         headers: {
@@ -155,7 +157,14 @@ export async function handleSuggestions(
       };
     }
     
-    const result = await searchService.getSuggestions(params.field, params.q);
+    const result = await searchService.getSuggestions(
+      params.field, 
+      params.q, 
+      {
+        make: params.make,
+        model: params.model
+      }
+    );
     
     return {
       statusCode: 200,
