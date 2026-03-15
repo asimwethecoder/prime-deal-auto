@@ -127,12 +127,24 @@ export class SearchService {
       return await this.searchRepository.getFacets(filters);
     } catch (error) {
       if (error instanceof OpenSearchError) {
-        console.warn('OpenSearch unavailable for facets, returning empty facets', {
+        console.warn('OpenSearch unavailable for facets, falling back to PostgreSQL', {
           error: error.message,
           filters
         });
-        // Return empty facets rather than failing
-        return {};
+        // Fallback to PostgreSQL
+        return await this.carRepository.getFacets({
+          make: filters.make,
+          model: filters.model,
+          variant: filters.variant,
+          bodyType: filters.bodyType,
+          fuelType: filters.fuelType,
+          transmission: filters.transmission,
+          condition: filters.condition,
+          minPrice: filters.minPrice,
+          maxPrice: filters.maxPrice,
+          minYear: filters.minYear,
+          maxYear: filters.maxYear
+        });
       }
       throw error;
     }

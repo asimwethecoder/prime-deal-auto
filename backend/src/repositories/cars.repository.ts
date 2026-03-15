@@ -456,4 +456,111 @@ export class CarRepository {
     const result = await pool.query(query);
     return result.rows;
   }
+
+  /**
+   * Get facet counts from PostgreSQL (fallback when OpenSearch unavailable)
+   * Returns counts for make, model, variant, body_type, fuel_type, transmission, condition
+   */
+  async getFacets(filters?: {
+    make?: string;
+    model?: string;
+    variant?: string;
+    bodyType?: string;
+    fuelType?: string;
+    transmission?: string;
+    condition?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minYear?: number;
+    maxYear?: number;
+  }): Promise<Record<string, Array<{ value: string; count: number }>>> {
+    const pool = await getPool();
+    
+    // Build WHERE clause for filters
+    const conditions: string[] = ["status = 'active'"];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (filters?.make) {
+      conditions.push(`make = $${paramIndex++}`);
+      params.push(filters.make);
+    }
+    if (filters?.model) {
+      conditions.push(`model = $${paramIndex++}`);
+      params.push(filters.model);
+    }
+    if (filters?.variant) {
+      conditions.push(`variant = $${paramIndex++}`);
+      params.push(filters.variant);
+    }
+    if (filters?.bodyType) {
+      conditions.push(`body_type = $${paramIndex++}`);
+      params.push(filters.bodyType);
+    }
+    if (filters?.fuelType) {
+      conditions.push(`fuel_type = $${paramIndex++}`);
+      params.push(filters.fuelType);
+    }
+    if (filters?.transmission) {
+      conditions.push(`transmission = $${paramIndex++}`);
+      params.push(filters.transmission);
+    }
+    if (filters?.condition) {
+      conditions.push(`condition = $${paramIndex++}`);
+      params.push(filters.condition);
+    }
+    if (filters?.minPrice !== undefined) {
+      conditions.push(`price >= $${paramIndex++}`);
+      params.push(filters.minPrice);
+    }
+    if (filters?.maxPrice !== undefined) {
+      conditions.push(`price <= $${paramIndex++}`);
+      params.push(filters.maxPrice);
+    }
+    if (filters?.minYear !== undefined) {
+      conditions.push(`year >= $${paramIndex++}`);
+      params.push(filters.minYear);
+    }
+    if (filters?.maxYear !== undefined) {
+      conditions.push(`year <= $${paramIndex++}`);
+      params.push(filters.maxYear);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // Run all facet queries in parallel
+    const facetFields = [
+      { key: 'make', column: 'make' },
+      { key: 'model', column: 'model' },
+      { key: 'variant', column: 'variant' },
+      { key: 'body_type', column: 'body_type' },
+      { key: 'fuel_type', column: 'fuel_type' },
+      { key: 'transmission', column: 'transmission' },
+      { key: 'condition', column: 'condition' }
+    ];
+
+    const facetQueries = facetFields.map(({ column }) => {
+      return pool.query(
+        `SELECT ${column} as value, COUNT(*) as count 
+         FROM cars 
+         WHERE ${whereClause} AND ${column} IS NOT NULL AND ${column} != ''
+         GROUP BY ${column} 
+         ORDER BY count DESC, ${column} ASC
+         LIMIT 50`,
+        params
+      );
+    });
+
+    const results = await Promise.all(facetQueries);
+
+    const facets: Record<string, Array<{ value: string; count: number }>> = {};
+    facetFields.forEach(({ key }, index) => {
+      facets[key] = results[index].rows.map(row => ({
+        value: row.value,
+        count: parseInt(row.count, 10)
+      }));
+    });
+
+    return facets;
+  }
 }

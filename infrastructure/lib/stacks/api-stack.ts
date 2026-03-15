@@ -34,36 +34,45 @@ export interface ApiStackProps extends cdk.StackProps {
 export class ApiStack extends cdk.Stack {
   public readonly api: apigateway.RestApi;
   public readonly lambdaFunction: lambda.Function;
+  public readonly lambdaSecurityGroup: ec2.SecurityGroup;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
     // Lambda security group — allows outbound to RDS Proxy and HTTPS
-    const lambdaSecurityGroup = new ec2.SecurityGroup(this, 'LambdaSG', {
+    this.lambdaSecurityGroup = new ec2.SecurityGroup(this, 'LambdaSG', {
       vpc: props.vpc,
       description: 'Security group for API Lambda - allows outbound to RDS Proxy and HTTPS',
       allowAllOutbound: false,
     });
 
     // Allow Lambda to connect to RDS Proxy on port 5432
-    lambdaSecurityGroup.addEgressRule(
+    this.lambdaSecurityGroup.addEgressRule(
       ec2.Peer.securityGroupId(props.proxySecurityGroupId),
       ec2.Port.tcp(5432),
       'Allow outbound to RDS Proxy'
     );
 
     // Allow Lambda to connect to HTTPS endpoints (Secrets Manager VPC endpoint and S3)
-    lambdaSecurityGroup.addEgressRule(
+    this.lambdaSecurityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(443),
       'Allow HTTPS outbound for Secrets Manager and S3'
+    );
+
+    // Allow inbound HTTPS from Lambda to VPC endpoints (OpenSearch Serverless VPC endpoint)
+    // The VPC endpoint uses the same security group, so Lambda needs to reach itself on 443
+    this.lambdaSecurityGroup.addIngressRule(
+      this.lambdaSecurityGroup,
+      ec2.Port.tcp(443),
+      'Allow HTTPS inbound from Lambda for OpenSearch VPC endpoint'
     );
 
     // Ingress rule on RDS Proxy SG must be created in this stack to avoid circular dependency
     // (DatabaseStack -> ApiStack). Using L1 CfnSecurityGroupIngress so the resource lives in ApiStack.
     new ec2.CfnSecurityGroupIngress(this, 'AllowLambdaToRdsProxy', {
       groupId: props.proxySecurityGroupId,
-      sourceSecurityGroupId: lambdaSecurityGroup.securityGroupId,
+      sourceSecurityGroupId: this.lambdaSecurityGroup.securityGroupId,
       ipProtocol: 'tcp',
       fromPort: 5432,
       toPort: 5432,
@@ -80,7 +89,7 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-      securityGroups: [lambdaSecurityGroup],
+      securityGroups: [this.lambdaSecurityGroup],
       environment: {
         DB_HOST: props.rdsProxy.endpoint,
         DB_NAME: 'primedealauto',
@@ -153,7 +162,7 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-      securityGroups: [lambdaSecurityGroup],
+      securityGroups: [this.lambdaSecurityGroup],
       environment: {
         DB_HOST: props.rdsProxy.endpoint,
         DB_NAME: 'primedealauto',
@@ -599,7 +608,7 @@ export class ApiStack extends cdk.Stack {
       },
     ], true);
 
-    NagSuppressions.addResourceSuppressions(lambdaSecurityGroup, [
+    NagSuppressions.addResourceSuppressions(this.lambdaSecurityGroup, [
       {
         id: 'AwsSolutions-EC23',
         reason: 'HTTPS egress to 0.0.0.0/0 required for Secrets Manager VPC endpoint and S3 access',

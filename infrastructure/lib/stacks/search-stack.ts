@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as opensearchserverless from 'aws-cdk-lib/aws-opensearchserverless';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
@@ -6,6 +7,8 @@ import { NagSuppressions } from 'cdk-nag';
 export interface SearchStackProps extends cdk.StackProps {
   lambdaExecutionRoleArn: string;
   environment: 'dev' | 'staging' | 'prod';
+  vpc: ec2.IVpc;
+  lambdaSecurityGroup: ec2.ISecurityGroup;
 }
 
 export class SearchStack extends cdk.Stack {
@@ -15,6 +18,14 @@ export class SearchStack extends cdk.Stack {
     super(scope, id, props);
 
     const collectionName = 'primedeals-cars';
+
+    // Create VPC Endpoint for OpenSearch Serverless
+    const vpcEndpoint = new opensearchserverless.CfnVpcEndpoint(this, 'VpcEndpoint', {
+      name: 'primedeals-search-vpce',
+      vpcId: props.vpc.vpcId,
+      subnetIds: props.vpc.isolatedSubnets.map(subnet => subnet.subnetId),
+      securityGroupIds: [props.lambdaSecurityGroup.securityGroupId],
+    });
 
     // Encryption policy — AWS-managed keys
     const encryptionPolicy = new opensearchserverless.CfnSecurityPolicy(this, 'EncryptionPolicy', {
@@ -31,15 +42,28 @@ export class SearchStack extends cdk.Stack {
       }),
     });
 
-    // Network policy — public access for development
+    // Network policy — VPC endpoint access for Lambda, public for dashboard
+    // Note: OpenSearch Serverless requires separate rules for public and VPC access
     const networkPolicy = new opensearchserverless.CfnSecurityPolicy(this, 'NetworkPolicy', {
       name: 'primedeals-search-network',
       type: 'network',
       policy: JSON.stringify([
         {
+          // Rule 1: VPC endpoint access for Lambda (data operations)
           Rules: [
             {
               ResourceType: 'collection',
+              Resource: [`collection/${collectionName}`],
+            },
+          ],
+          AllowFromPublic: false,
+          SourceVPCEs: [vpcEndpoint.attrId],
+        },
+        {
+          // Rule 2: Public access for dashboard only
+          Rules: [
+            {
+              ResourceType: 'dashboard',
               Resource: [`collection/${collectionName}`],
             },
           ],
@@ -47,6 +71,9 @@ export class SearchStack extends cdk.Stack {
         },
       ]),
     });
+
+    // Network policy depends on VPC endpoint
+    networkPolicy.addDependency(vpcEndpoint);
 
     // OpenSearch Serverless collection
     const collection = new opensearchserverless.CfnCollection(this, 'SearchCollection', {
@@ -98,13 +125,19 @@ export class SearchStack extends cdk.Stack {
       exportName: 'SearchCollectionArn',
     });
 
+    new cdk.CfnOutput(this, 'VpcEndpointId', {
+      value: vpcEndpoint.attrId,
+      description: 'OpenSearch Serverless VPC endpoint ID',
+      exportName: 'SearchVpcEndpointId',
+    });
+
     // cdk-nag suppressions with documented justifications
     NagSuppressions.addResourceSuppressions(
       networkPolicy,
       [
         {
           id: 'AwsSolutions-OS5',
-          reason: 'Public access required for development environment - will be restricted to VPC in production',
+          reason: 'Public access enabled for OpenSearch dashboard access - Lambda uses VPC endpoint for data operations',
         },
       ],
       true

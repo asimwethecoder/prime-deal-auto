@@ -59,9 +59,11 @@ const searchStack = new SearchStack(app, 'PrimeDeals-Search', {
   env,
   lambdaExecutionRoleArn: apiStack.lambdaFunction.role!.roleArn,
   environment: 'dev',
+  vpc: databaseStack.vpc,
+  lambdaSecurityGroup: apiStack.lambdaSecurityGroup,
 });
 
-// SearchStack depends on ApiStack (needs Lambda role ARN)
+// SearchStack depends on ApiStack (needs Lambda role ARN and security group)
 searchStack.addDependency(apiStack);
 
 // Migration stack (temporary - for running database migrations)
