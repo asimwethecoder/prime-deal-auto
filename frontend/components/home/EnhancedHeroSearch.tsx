@@ -132,7 +132,7 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
     <div className="w-full max-w-5xl mx-auto">
       {/* Enhanced Search Bar with Cascading Dropdowns */}
       <div className="relative" ref={dropdownRef}>
-        <div className="flex flex-nowrap items-stretch divide-x divide-slate-200 bg-white rounded-full shadow-lg min-h-[56px] overflow-x-auto overflow-y-visible">
+        <div className="flex flex-nowrap items-stretch divide-x divide-slate-200 bg-white rounded-full shadow-lg min-h-[56px]">
           
           {/* Make Dropdown */}
           <div className="flex-1 min-w-0 relative rounded-l-full bg-white">
@@ -389,10 +389,10 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
             )}
           </div>
 
-          {/* Search Button */}
+          {/* Search Button - Pill style */}
           <Link
             href={searchHref}
-            className="flex items-center justify-center gap-2 bg-[#405FF2] text-white px-5 py-3 rounded-r-full font-medium text-[14px] hover:bg-[#3651E0] transition-colors shrink-0 min-w-[120px]"
+            className="flex items-center justify-center gap-2 bg-[#405FF2] text-white px-6 py-3 rounded-[120px] font-medium text-[15px] hover:bg-[#3651E0] transition-colors shrink-0 min-w-[140px] max-md:hidden"
           >
             <DynamicIcon 
               name="search-alt-2-svgrepo-com" 
@@ -403,6 +403,20 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
             <span className="whitespace-nowrap">{searchButtonText}</span>
           </Link>
         </div>
+
+        {/* Mobile Search Button - Full width below the filter bar */}
+        <Link
+          href={searchHref}
+          className="md:hidden flex items-center justify-center gap-2 bg-[#405FF2] text-white w-full py-4 mt-3 rounded-[120px] font-medium text-[15px] hover:bg-[#3651E0] transition-colors"
+        >
+          <DynamicIcon 
+            name="search-alt-2-svgrepo-com" 
+            width={18} 
+            height={18} 
+            className="shrink-0 text-white" 
+          />
+          <span className="whitespace-nowrap">{searchButtonText}</span>
+        </Link>
       </div>
 
       {/* Body Type Quick Filters */}

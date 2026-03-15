@@ -25,7 +25,9 @@ export function CarCardDark({ car, badge, originalPrice }: CarCardDarkProps) {
   const primaryIndex = images.findIndex((img) => img.is_primary);
   const [currentIndex, setCurrentIndex] = useState(primaryIndex >= 0 ? primaryIndex : 0);
   const currentImage = images[currentIndex] || images[0];
-  const imageUrl = currentImage?.cloudfront_url || '/placeholder-car.jpg';
+  
+  // Use cloudfront_url from images array, or fall back to primary_image_url from search API
+  const imageUrl = currentImage?.cloudfront_url || car.primary_image_url || '/placeholder-car.jpg';
 
   const showGreatPrice = originalPrice != null && originalPrice > car.price;
   const lowMileageBadge = car.mileage < 80000 ? 'Low Mileage' : undefined;

@@ -11,6 +11,7 @@ import { HeroCarousel } from '@/components/home/HeroCarousel';
 import { BrandCarousel } from '@/components/home/BrandCarousel';
 import { ExploreAllVehiclesSection } from '@/components/home/ExploreAllVehiclesSection';
 import { PopularMakesSection } from '@/components/home/PopularMakesSection';
+import { TestimonialsCarousel } from '@/components/home/TestimonialsCarousel';
 import { CarCard } from '@/components/cars/CarCard';
 import { CarCardSkeleton } from '@/components/cars/CarCardSkeleton';
 import { EnhancedHeroSearch } from '@/components/home/EnhancedHeroSearch';
@@ -19,7 +20,6 @@ import {
   Gem,
   DollarSign,
   Wrench,
-  Star,
   ArrowRight,
   Calendar,
   User
@@ -44,19 +44,16 @@ export default async function HomePage() {
   let error: string | null = null;
   let carCount = 0;
 
-  let exploreCars: CarWithImages[] = [];
   let facets: FacetResult = {};
 
   try {
-    const [featured, countRes, exploreRes, facetsRes] = await Promise.all([
+    const [featured, countRes, facetsRes] = await Promise.all([
       getFeaturedCars(),
       getCars({ limit: 1 }),
-      getCars({ limit: 13 }),
       getSearchFacets().catch(() => ({})),
     ]);
     featuredCars = featured;
     carCount = countRes.total;
-    exploreCars = exploreRes.data ?? [];
     facets = facetsRes ?? {};
   } catch (err) {
     console.error('Failed to fetch featured cars:', err);
@@ -108,7 +105,7 @@ export default async function HomePage() {
       </section>
 
       {/* Explore All Vehicles */}
-      <ExploreAllVehiclesSection cars={exploreCars} />
+      <ExploreAllVehiclesSection />
 
       {/* Popular Makes - dark section, make tabs, car slider */}
       <PopularMakesSection facets={facets} />
@@ -170,36 +167,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Customer Reviews Section */}
-      <section className="py-16 bg-[#F9FBFC]">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-[40px] leading-[45px] font-bold text-primary text-center mb-12">
-            What Our Customers Say
-          </h2>
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-[16px] p-8 shadow-[0px_6px_24px_rgba(0,0,0,0.05)]">
-              <div className="flex items-center gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-[#E1C03F] text-[#E1C03F]" />
-                ))}
-              </div>
-              <p className="text-[26px] leading-[42px] font-medium text-primary mb-6">
-                "Excellent service and great selection of cars. The team at Prime Deal Auto made 
-                the buying process smooth and hassle-free. Highly recommended!"
-              </p>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-secondary" />
-                </div>
-                <div>
-                  <div className="text-[18px] leading-[32px] font-medium text-primary">John Doe</div>
-                  <div className="text-[14px] leading-[24px] text-gray-600">Johannesburg, SA</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Customer Reviews Section - Carousel */}
+      <TestimonialsCarousel />
 
       {/* Banner CTAs - match reference: same description, filled Get Started buttons */}
       <section className="py-16 bg-white">

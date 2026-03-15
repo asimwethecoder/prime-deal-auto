@@ -1,44 +1,42 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CarCard } from '@/components/cars/CarCard';
-import { CarWithImages } from '@/lib/api/types';
+import { searchCars } from '@/lib/api/search';
+import type { CarWithImages } from '@/lib/api/types';
 
-const PAGE_SIZE = 5;
-const CURRENT_YEAR = new Date().getFullYear();
+const PAGE_SIZE = 4;
 
-type TabId = 'new' | 'used' | 'in_stock';
+type TabId = 'suv' | 'bakkie' | 'sedan';
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'new', label: 'New Cars' },
-  { id: 'used', label: 'Used Cars' },
-  { id: 'in_stock', label: 'In Stock' },
+const TABS: { id: TabId; label: string; bodyType: string }[] = [
+  { id: 'suv', label: 'SUVs', bodyType: 'SUV' },
+  { id: 'bakkie', label: 'Bakkies', bodyType: 'Bakkie' },
+  { id: 'sedan', label: 'Sedans', bodyType: 'Sedan' },
 ];
 
-interface ExploreAllVehiclesSectionProps {
-  cars: CarWithImages[];
-}
-
-export function ExploreAllVehiclesSection({ cars }: ExploreAllVehiclesSectionProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('new');
+export function ExploreAllVehiclesSection() {
+  const [activeTab, setActiveTab] = useState<TabId>('suv');
   const [pageIndex, setPageIndex] = useState(0);
 
-  const filteredCars = useMemo(() => {
-    if (activeTab === 'new') {
-      return cars.filter((c) => c.year >= CURRENT_YEAR - 1);
-    }
-    if (activeTab === 'used') {
-      return cars.filter((c) => c.year < CURRENT_YEAR - 1);
-    }
-    return cars;
-  }, [cars, activeTab]);
+  const activeBodyType = TABS.find((t) => t.id === activeTab)?.bodyType ?? 'SUV';
 
-  const totalPages = Math.max(1, Math.ceil(filteredCars.length / PAGE_SIZE));
+  // Fetch cars filtered by body type
+  const { data: searchResult, isLoading } = useQuery({
+    queryKey: ['explore-vehicles', activeBodyType],
+    queryFn: () => searchCars({ bodyType: activeBodyType, limit: 12 }),
+    staleTime: 60_000,
+  });
+
+  const cars: CarWithImages[] = searchResult?.data ?? [];
+
+  const totalPages = Math.max(1, Math.ceil(cars.length / PAGE_SIZE));
   const safePageIndex = Math.min(pageIndex, totalPages - 1);
   const start = safePageIndex * PAGE_SIZE;
-  const slice = filteredCars.slice(start, start + PAGE_SIZE);
+  const slice = cars.slice(start, start + PAGE_SIZE);
 
   const goPrev = () => setPageIndex((p) => Math.max(0, p - 1));
   const goNext = () => setPageIndex((p) => Math.min(totalPages - 1, p + 1));
@@ -70,7 +68,7 @@ export function ExploreAllVehiclesSection({ cars }: ExploreAllVehiclesSectionPro
         <div className="border-b border-[#E1E1E1] mb-8">
           <div
             role="tablist"
-            aria-label="Filter by vehicle type"
+            aria-label="Filter by body type"
             className="flex flex-row items-start gap-8"
           >
             {TABS.map((tab) => (
@@ -95,45 +93,56 @@ export function ExploreAllVehiclesSection({ cars }: ExploreAllVehiclesSectionPro
           </div>
         </div>
 
-        <div
-          id="explore-vehicles-grid"
-          role="tabpanel"
-          aria-labelledby={`tab-${activeTab}`}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-        >
-          {slice.map((car) => (
-            <CarCard key={car.id} car={car} />
-          ))}
-        </div>
-
-        {filteredCars.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-[320px] rounded-[16px] bg-gray-100 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : cars.length === 0 ? (
           <p className="text-[15px] leading-[26px] text-primary py-8 text-center">
-            No vehicles match this filter.
+            No {TABS.find((t) => t.id === activeTab)?.label.toLowerCase()} available at the moment.
           </p>
         ) : (
-          <div className="flex items-center gap-5 mt-8">
-            <button
-              type="button"
-              onClick={goPrev}
-              disabled={safePageIndex === 0}
-              aria-label="Previous page"
-              className="w-[60px] h-10 flex items-center justify-center rounded-[30px] border border-primary bg-[#F9FBFC] text-primary disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/5 focus-visible:outline-2 outline-offset-2 outline-secondary"
+          <>
+            <div
+              id="explore-vehicles-grid"
+              role="tabpanel"
+              aria-labelledby={`tab-${activeTab}`}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
             >
-              <ChevronLeft className="w-5 h-5" aria-hidden />
-            </button>
-            <span className="text-[15px] leading-[26px] text-primary min-w-[4rem] text-center">
-              {slice.length} of {filteredCars.length}
-            </span>
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={safePageIndex >= totalPages - 1}
-              aria-label="Next page"
-              className="w-[60px] h-10 flex items-center justify-center rounded-[30px] border border-[#E1E1E1] bg-white text-primary disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 focus-visible:outline-2 outline-offset-2 outline-secondary"
-            >
-              <ChevronRight className="w-5 h-5" aria-hidden />
-            </button>
-          </div>
+              {slice.map((car) => (
+                <CarCard key={car.id} car={car} />
+              ))}
+            </div>
+
+            <div className="flex items-center gap-5 mt-8">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={safePageIndex === 0}
+                aria-label="Previous page"
+                className="w-[60px] h-10 flex items-center justify-center rounded-[30px] border border-primary bg-[#F9FBFC] text-primary disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/5 focus-visible:outline-2 outline-offset-2 outline-secondary"
+              >
+                <ChevronLeft className="w-5 h-5" aria-hidden />
+              </button>
+              <span className="text-[15px] leading-[26px] text-primary min-w-[4rem] text-center">
+                {slice.length} of {cars.length}
+              </span>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={safePageIndex >= totalPages - 1}
+                aria-label="Next page"
+                className="w-[60px] h-10 flex items-center justify-center rounded-[30px] border border-[#E1E1E1] bg-white text-primary disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 focus-visible:outline-2 outline-offset-2 outline-secondary"
+              >
+                <ChevronRight className="w-5 h-5" aria-hidden />
+              </button>
+            </div>
+          </>
         )}
       </div>
     </section>

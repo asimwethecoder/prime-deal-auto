@@ -94,37 +94,37 @@ export function HeroSearch({ totalCount = 0 }: HeroSearchProps) {
   return (
     <div className="w-full max-w-5xl mx-auto">
       {/* Pill: single continuous bar, divide-x for segment dividers (no gap) */}
-      <div className="flex flex-nowrap items-stretch divide-x divide-slate-200 bg-white rounded-full shadow-lg min-h-[56px] overflow-x-auto overflow-y-visible" ref={dropdownRef}>
+      <div className="flex flex-nowrap items-stretch divide-x divide-slate-200 bg-white rounded-full shadow-lg min-h-[56px] max-md:flex-col max-md:divide-x-0 max-md:divide-y max-md:rounded-[24px]" ref={dropdownRef}>
         {/* Make - rounded-l-full for pill left edge */}
-        <div className="flex-1 min-w-0 relative rounded-l-full bg-white">
+        <div className="flex-1 min-w-0 relative rounded-l-full bg-white max-md:rounded-l-none max-md:rounded-t-[24px]">
           <button
             type="button"
             onClick={() => open('make')}
-            className="w-full h-full flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-primary text-[15px] truncate hover:bg-bg-1 transition-colors cursor-pointer rounded-l-full"
+            className="w-full h-full flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-primary text-[15px] truncate hover:bg-bg-1 transition-colors cursor-pointer rounded-l-full max-md:rounded-l-none max-md:rounded-t-[24px]"
           >
             <span className="truncate">{make}</span>
             <Icon src="chevron-down-double-svgrepo-com.svg" width={16} height={16} className="shrink-0 ml-auto" aria-hidden />
           </button>
           {openDropdown === 'make' && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-card shadow-card z-[100] max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 min-w-[200px] bg-white border border-border rounded-[24px] shadow-[0px_10px_40px_rgba(0,0,0,0.05)] z-[100] max-h-60 overflow-y-auto">
               <button
                 type="button"
-                onClick={() => { setMake('Any Makes'); setOpenDropdown(null); }}
-                className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
+                onClick={() => { setMake('Any Makes'); setModel('Models'); setVariant('Variants'); setOpenDropdown(null); }}
+                className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary first:rounded-t-[24px]"
               >
                 Any Makes
               </button>
               {facetsLoading ? (
                 <div className="px-4 py-3 text-[15px] text-gray-500">Loading...</div>
               ) : (
-                makeOptions.map((item: { value: string; count: number }) => (
+                makeOptions.map((item: { value: string; count: number }, index: number) => (
                   <button
                     key={item.value}
                     type="button"
-                    onClick={() => { setMake(item.value); setOpenDropdown(null); }}
-                    className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
+                    onClick={() => { setMake(item.value); setModel('Models'); setVariant('Variants'); setOpenDropdown(null); }}
+                    className={`block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary ${index === makeOptions.length - 1 ? 'last:rounded-b-[24px]' : ''}`}
                   >
-                    {item.value}
+                    {item.value} <span className="text-primary/50">({item.count})</span>
                   </button>
                 ))
               )}
@@ -143,20 +143,20 @@ export function HeroSearch({ totalCount = 0 }: HeroSearchProps) {
             <Icon src="chevron-down-double-svgrepo-com.svg" width={16} height={16} className="shrink-0 ml-auto" aria-hidden />
           </button>
           {openDropdown === 'model' && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-card shadow-card z-[100] max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 min-w-[200px] bg-white border border-border rounded-[24px] shadow-[0px_10px_40px_rgba(0,0,0,0.05)] z-[100] max-h-60 overflow-y-auto">
               <button
                 type="button"
-                onClick={() => { setModel('Any Models'); setOpenDropdown(null); }}
-                className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
+                onClick={() => { setModel('Any Models'); setVariant('Variants'); setOpenDropdown(null); }}
+                className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary first:rounded-t-[24px]"
               >
                 Any Models
               </button>
-              {(modelSuggestions ?? []).map(({ text }) => (
+              {(modelSuggestions ?? []).map(({ text }, index: number) => (
                 <button
                   key={text}
                   type="button"
-                  onClick={() => { setModel(text); setOpenDropdown(null); }}
-                  className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
+                  onClick={() => { setModel(text); setVariant('Variants'); setOpenDropdown(null); }}
+                  className={`block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary ${index === (modelSuggestions?.length ?? 0) - 1 ? 'last:rounded-b-[24px]' : ''}`}
                 >
                   {text}
                 </button>
@@ -176,22 +176,22 @@ export function HeroSearch({ totalCount = 0 }: HeroSearchProps) {
             <Icon src="chevron-down-double-svgrepo-com.svg" width={16} height={16} className="shrink-0 ml-auto" aria-hidden />
           </button>
           {openDropdown === 'variant' && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-card shadow-card z-[100] max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 min-w-[200px] bg-white border border-border rounded-[24px] shadow-[0px_10px_40px_rgba(0,0,0,0.05)] z-[100] max-h-60 overflow-y-auto">
               <button
                 type="button"
                 onClick={() => { setVariant('Any Variants'); setOpenDropdown(null); }}
-                className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
+                className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary first:rounded-t-[24px]"
               >
                 Any Variants
               </button>
-              {variantOptions.map((item: { value: string; count: number }) => (
+              {variantOptions.map((item: { value: string; count: number }, index: number) => (
                 <button
                   key={item.value}
                   type="button"
                   onClick={() => { setVariant(item.value); setOpenDropdown(null); }}
-                  className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
+                  className={`block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary ${index === variantOptions.length - 1 ? 'last:rounded-b-[24px]' : ''}`}
                 >
-                  {item.value}
+                  {item.value} <span className="text-primary/50">({item.count})</span>
                 </button>
               ))}
             </div>
@@ -209,15 +209,15 @@ export function HeroSearch({ totalCount = 0 }: HeroSearchProps) {
             <Icon src="chevron-down-double-svgrepo-com.svg" width={16} height={16} className="shrink-0 ml-auto" aria-hidden />
           </button>
           {openDropdown === 'minPrice' && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-card shadow-card z-50 max-h-60 overflow-y-auto">
-              {minPriceOptions.map(({ value, label }) => (
+            <div className="absolute top-full left-0 mt-2 min-w-[160px] bg-white border border-border rounded-[24px] shadow-[0px_10px_40px_rgba(0,0,0,0.05)] z-50 max-h-60 overflow-y-auto">
+              {minPriceOptions.map(({ value, label }, index: number) => (
                 <button
                   key={label}
                   type="button"
                   onClick={() => { setMinPrice(value); setOpenDropdown(null); }}
-                  className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
+                  className={`block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary ${index === 0 ? 'rounded-t-[24px]' : ''} ${index === minPriceOptions.length - 1 ? 'rounded-b-[24px]' : ''}`}
                 >
-                  {value == null ? 'Min Price' : label}
+                  {value == null ? 'Any' : label}
                 </button>
               ))}
             </div>
@@ -235,29 +235,39 @@ export function HeroSearch({ totalCount = 0 }: HeroSearchProps) {
             <Icon src="chevron-down-double-svgrepo-com.svg" width={16} height={16} className="shrink-0 ml-auto" aria-hidden />
           </button>
           {openDropdown === 'maxPrice' && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-card shadow-card z-[100] max-h-60 overflow-y-auto">
-              {maxPriceOptions.map(({ value, label }) => (
+            <div className="absolute top-full left-0 mt-2 min-w-[160px] bg-white border border-border rounded-[24px] shadow-[0px_10px_40px_rgba(0,0,0,0.05)] z-[100] max-h-60 overflow-y-auto">
+              {maxPriceOptions.map(({ value, label }, index: number) => (
                 <button
                   key={label}
                   type="button"
                   onClick={() => { setMaxPrice(value); setOpenDropdown(null); }}
-                  className="block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary"
+                  className={`block w-full px-4 py-3 text-left text-[15px] hover:bg-bg-1 text-primary ${index === 0 ? 'rounded-t-[24px]' : ''} ${index === maxPriceOptions.length - 1 ? 'rounded-b-[24px]' : ''}`}
                 >
-                  {value == null ? 'Max Price' : label}
+                  {value == null ? 'Any' : label}
                 </button>
               ))}
             </div>
           )}
         </div>
 
+        {/* Search Button - Pill style matching Sign Up button */}
         <Link
           href={searchHref}
-          className="flex items-center justify-center gap-2 bg-secondary text-white px-5 py-3 rounded-r-full font-medium text-[14px] hover:bg-secondary/90 transition-colors shrink-0 min-w-[120px]"
+          className="flex items-center justify-center gap-2 bg-secondary text-white px-6 py-3 rounded-[120px] font-medium text-[15px] hover:bg-secondary/90 transition-colors shrink-0 min-w-[140px] max-md:hidden"
         >
           <Icon src="search-alt-2-svgrepo-com.svg" width={18} height={18} className="invert shrink-0" aria-hidden />
           <span className="whitespace-nowrap">{searchButtonText}</span>
         </Link>
       </div>
+
+      {/* Mobile Search Button - Full width below the filter bar */}
+      <Link
+        href={searchHref}
+        className="md:hidden flex items-center justify-center gap-2 bg-secondary text-white w-full py-4 mt-3 rounded-[120px] font-medium text-[15px] hover:bg-secondary/90 transition-colors"
+      >
+        <Icon src="search-alt-2-svgrepo-com.svg" width={18} height={18} className="invert shrink-0" aria-hidden />
+        <span className="whitespace-nowrap">{searchButtonText}</span>
+      </Link>
 
       {/* Or Browse Featured Model - body type icons (capsule: icon + label horizontal) */}
       <p className="text-white/90 text-[14px] mt-8 mb-5 text-center">Or Browse Featured Model</p>
