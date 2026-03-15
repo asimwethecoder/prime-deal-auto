@@ -343,23 +343,7 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
         </p>
       </div>
 
-      {/* Figma order: Condition, Type, Make, Model, Variant, Year, Price, Transmission, Fuel Type */}
-
-      <FacetList
-        title="Condition"
-        facetKey="condition"
-        currentValue={currentFilters.condition}
-        items={facets.condition ?? []}
-        searchParams={searchParams}
-      />
-
-      <FacetCheckboxList
-        title="Type"
-        facetKey="bodyType"
-        currentValue={currentFilters.bodyType}
-        items={facets.body_type ?? []}
-        searchParams={searchParams}
-      />
+      {/* Filter order: Make, Model, Variant, Body Type, Year, Price, Condition, Transmission, Fuel Type */}
 
       <FilterDropdown
         title="Make"
@@ -388,6 +372,14 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
         facetKey="variant"
         searchParams={searchParams}
         disabled={!currentFilters.make || !currentFilters.model}
+      />
+
+      <FacetCheckboxList
+        title="Body Type"
+        facetKey="bodyType"
+        currentValue={currentFilters.bodyType}
+        items={facets.body_type ?? []}
+        searchParams={searchParams}
       />
 
       {/* Year range */}
@@ -487,6 +479,14 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
           Apply price
         </button>
       </div>
+
+      <FacetList
+        title="Condition"
+        facetKey="condition"
+        currentValue={currentFilters.condition}
+        items={facets.condition ?? []}
+        searchParams={searchParams}
+      />
 
       <FacetCheckboxList
         title="Transmission"
