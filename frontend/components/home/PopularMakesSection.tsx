@@ -55,7 +55,7 @@ export function PopularMakesSection({ facets }: PopularMakesSectionProps) {
       className="bg-primary py-12 md:min-h-[806px] md:py-20"
       aria-labelledby="popular-makes-heading"
     >
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <h2
@@ -123,8 +123,8 @@ export function PopularMakesSection({ facets }: PopularMakesSectionProps) {
         ) : (
           <>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {slice.map((car) => (
-                <CarCardDark key={car.id} car={car} />
+              {slice.map((car, i) => (
+                <CarCardDark key={car.id} car={car} priority={i < 4} />
               ))}
             </div>
 

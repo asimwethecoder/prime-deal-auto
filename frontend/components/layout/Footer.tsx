@@ -9,7 +9,7 @@ export function Footer() {
 
   return (
     <footer className="bg-primary bg-[#050B20] text-white rounded-t-[40px] md:rounded-t-[80px] mt-20">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8 py-12 lg:py-16">
         {/* Newsletter block */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
           <div>
@@ -29,7 +29,7 @@ export function Footer() {
             />
             <button
               type="button"
-              className="bg-secondary text-white px-8 py-3 rounded-full font-medium text-[15px] shrink-0 hover:bg-secondary/90 transition-colors"
+              className="bg-secondary text-white px-8 py-3 min-h-[54px] rounded-full font-medium text-[15px] shrink-0 hover:bg-secondary/90 transition-colors"
             >
               Sign Up
             </button>
@@ -116,16 +116,16 @@ export function Footer() {
             </div>
             <h3 className="text-[20px] leading-[30px] font-medium text-white mb-4">Connect With Us</h3>
             <div className="flex gap-3">
-              <a href="https://www.facebook.com/profile.php?id=61567384738083" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Facebook">
+              <a href="https://www.facebook.com/profile.php?id=61567384738083" target="_blank" rel="noopener noreferrer" className="w-[50px] h-[50px] md:w-10 md:h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Facebook">
                 <Icon src="facebook-svgrepo-com.svg" width={16} height={16} className="invert" aria-hidden />
               </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Twitter">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-[50px] h-[50px] md:w-10 md:h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Twitter">
                 <Icon src="twitter-svgrepo-com.svg" width={16} height={16} className="invert" aria-hidden />
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Instagram">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-[50px] h-[50px] md:w-10 md:h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Instagram">
                 <Icon src="instagram-svgrepo-com.svg" width={16} height={16} className="invert" aria-hidden />
               </a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="LinkedIn">
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-[50px] h-[50px] md:w-10 md:h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="LinkedIn">
                 <Linkedin className="h-4 w-4" />
               </a>
             </div>

@@ -50,9 +50,9 @@ export function HeroCarousel() {
           </motion.div>
         </AnimatePresence>
       </div>
-      {/* Dark overlay for text and nav legibility */}
+      {/* Dark overlay for legibility - white text and AI bar pop */}
       <div
-        className="col-start-1 row-start-1 min-h-[90vh] w-full absolute inset-0 bg-black/30 pointer-events-none"
+        className="col-start-1 row-start-1 min-h-[90vh] w-full absolute inset-0 bg-black/60 pointer-events-none"
         aria-hidden
       />
     </div>

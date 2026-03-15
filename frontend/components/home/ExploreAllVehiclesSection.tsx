@@ -48,7 +48,7 @@ export function ExploreAllVehiclesSection() {
 
   return (
     <section className="py-16 bg-white" aria-labelledby="explore-all-vehicles-heading">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <h2
             id="explore-all-vehicles-heading"
@@ -94,7 +94,7 @@ export function ExploreAllVehiclesSection() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
@@ -112,10 +112,10 @@ export function ExploreAllVehiclesSection() {
               id="explore-vehicles-grid"
               role="tabpanel"
               aria-labelledby={`tab-${activeTab}`}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
             >
-              {slice.map((car) => (
-                <CarCard key={car.id} car={car} />
+              {slice.map((car, i) => (
+                <CarCard key={car.id} car={car} priority={i < 4} />
               ))}
             </div>
 

@@ -18,7 +18,11 @@ interface CarCardProps {
   badge?: string;
   /** Optional original price for strikethrough and Great Price badge */
   originalPrice?: number;
+  /** Set true for above-the-fold cards to load image immediately */
+  priority?: boolean;
 }
+
+const CLOUDFRONT_BASE = process.env.NEXT_PUBLIC_CLOUDFRONT_URL ?? 'https://dyzz4logwgput.cloudfront.net';
 
 const cardHover = {
   y: -2,
@@ -26,10 +30,13 @@ const cardHover = {
   transition: { type: 'spring' as const, stiffness: 300, damping: 20 },
 };
 
-export function CarCard({ car, badge, originalPrice }: CarCardProps) {
+export function CarCard({ car, badge, originalPrice, priority }: CarCardProps) {
   const images = car.images ?? [];
   const primaryImage = images.find((img) => img.is_primary) || images[0];
-  const imageUrl = primaryImage?.cloudfront_url || car.primary_image_url || '/placeholder-car.jpg';
+  const rawUrl = primaryImage?.cloudfront_url || car.primary_image_url || '/placeholder-car.jpg';
+  const imageUrl = rawUrl.startsWith('http') || rawUrl === '/placeholder-car.jpg'
+    ? rawUrl
+    : `${CLOUDFRONT_BASE}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`;
 
   const showGreatPrice = originalPrice != null && originalPrice > car.price;
   const lowMileageBadge = car.mileage < 80000 ? 'Low Mileage' : undefined;
@@ -53,13 +60,14 @@ export function CarCard({ car, badge, originalPrice }: CarCardProps) {
         whileHover={cardHover}
         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       >
-        {/* Image area: fixed height, overlay, zoom on hover */}
-        <div className="relative w-full h-[230px] bg-primary rounded-t-[16px] overflow-hidden">
+        {/* Image area: aspect-video on mobile, fixed height on desktop; overlay, zoom on hover */}
+        <div className="relative w-full aspect-video md:aspect-auto md:h-[230px] bg-primary rounded-t-[16px] overflow-hidden">
           <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
             <Image
               src={imageUrl}
               alt={`${car.year} ${car.make} ${car.model}`}
               fill
+              priority={priority}
               className="object-cover"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />

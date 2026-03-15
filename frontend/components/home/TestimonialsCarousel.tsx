@@ -92,7 +92,7 @@ export function TestimonialsCarousel() {
 
   return (
     <section className="py-16 bg-[#F9FBFC] overflow-hidden">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8">
         <h2 className="text-[40px] leading-[45px] font-bold text-primary text-center mb-12">
           What Our Customers Say
         </h2>

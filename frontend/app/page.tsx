@@ -15,6 +15,7 @@ import { TestimonialsCarousel } from '@/components/home/TestimonialsCarousel';
 import { CarCard } from '@/components/cars/CarCard';
 import { CarCardSkeleton } from '@/components/cars/CarCardSkeleton';
 import { EnhancedHeroSearch } from '@/components/home/EnhancedHeroSearch';
+import { AISearchBar } from '@/components/search/AISearchBar';
 import {
   Tag,
   Gem,
@@ -70,24 +71,38 @@ export default async function HomePage() {
       {/* Hero Section: 90vh, content vertically centered */}
       <section className="relative grid grid-cols-1 grid-rows-1 min-h-[90vh] overflow-hidden">
         <HeroCarousel />
-        <div className="col-start-1 row-start-1 z-10 flex flex-col items-center justify-center w-full px-4 sm:px-6 lg:px-8 py-16">
-          <div className="w-full max-w-[1400px] mx-auto text-center">
-            <h1 className="text-5xl sm:text-6xl lg:text-[70px] lg:leading-[91px] font-extrabold text-white mb-4">
-              Prime Deal Auto
-            </h1>
-            <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto font-normal mb-10">
-              Quality used cars at unbeatable prices.
-            </p>
-          </div>
-          <div className="w-full max-w-[1400px] mx-auto flex justify-center">
-            <EnhancedHeroSearch totalCount={carCount} />
+        <div className="col-start-1 row-start-1 z-10 flex flex-col items-center justify-center w-full px-6 md:px-6 lg:px-8 py-16 text-center">
+          <div className="w-full max-w-[1400px] mx-auto flex flex-col items-center gap-y-6">
+            {/* 1. Main Heading: text-4xl mobile → text-6xl desktop, font-bold 700, #FFFFFF */}
+            <div className="w-full max-w-[1400px] mx-auto text-center">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">
+                Prime Deal Auto
+              </h1>
+              <p className="text-lg text-white/80 max-w-2xl mx-auto font-normal text-center">
+                Quality used cars at unbeatable prices.
+              </p>
+            </div>
+            {/* 2. AI Search Bar (Tier 1) - mobile only; rounded-full, white, sh-3 shadow */}
+            <div className="w-full max-w-[1400px] mx-auto md:hidden" id="hero-search">
+              <AISearchBar
+                placeholder='Search e.g. "SUVs under R300k"'
+                className="max-w-xl mx-auto w-full min-w-0"
+                variant="hero"
+                inputId="hero-ai-search-input"
+              />
+            </div>
+            <p className="text-white/80 text-sm font-normal text-center md:hidden -mt-2">Or search by</p>
+            {/* 3. Classic Filters (Tier 2) - gap-y-4 on mobile, 12px radius */}
+            <div className="w-full max-w-[1400px] mx-auto flex justify-center gap-y-4 md:gap-y-0">
+              <EnhancedHeroSearch totalCount={carCount} />
+            </div>
           </div>
         </div>
       </section>
 
       {/* White container: subtle curve overlap, Premium Brands right after hero */}
-      <section className="relative z-10 -mt-16 pt-16 pb-16 bg-[#F9FBFC] rounded-t-[80px]">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative z-10 -mt-16 pt-16 pb-16 bg-[#F9FBFC] rounded-t-[40px] md:rounded-t-[80px]">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <h2 className="text-[40px] leading-[45px] font-bold text-primary">
               Explore Our Premium Brands
@@ -113,7 +128,7 @@ export default async function HomePage() {
       {/* Featured Cars Section - hidden; set SHOW_FEATURED_CARS to true to show */}
       {SHOW_FEATURED_CARS && (
         <section className="py-16">
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl sm:text-4xl font-bold text-primary">
                 Featured Cars
@@ -172,7 +187,7 @@ export default async function HomePage() {
 
       {/* Banner CTAs - match reference: same description, filled Get Started buttons */}
       <section className="py-16 bg-white">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Looking for a Car - light blue card, blue button */}
             <div className="bg-[#E9F2FF] rounded-[16px] p-8 flex items-center gap-6">
@@ -190,7 +205,7 @@ export default async function HomePage() {
                 </p>
                 <Link
                   href="/cars"
-                  className="inline-flex items-center gap-2 bg-secondary text-white px-6 py-3 rounded-[12px] font-medium hover:bg-secondary/90 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 bg-secondary text-white px-6 py-3 min-h-[54px] rounded-[12px] font-medium hover:bg-secondary/90 transition-colors"
                 >
                   Get Started
                   <ArrowRight className="w-4 h-4" />
@@ -212,7 +227,7 @@ export default async function HomePage() {
                 </p>
                 <Link
                   href="/contact"
-                  className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-[12px] font-medium hover:bg-primary/90 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 min-h-[54px] rounded-[12px] font-medium hover:bg-primary/90 transition-colors"
                 >
                   Get Started
                   <ArrowRight className="w-4 h-4" />
@@ -225,7 +240,7 @@ export default async function HomePage() {
 
       {/* Blog Section */}
       <section className="py-16 bg-[#F9FBFC]">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-12">
             <h2 className="text-[40px] leading-[45px] font-bold text-primary">
               Latest Blog Posts
@@ -298,7 +313,7 @@ export default async function HomePage() {
 
       {/* CTA Block - Get A Fair Price */}
       <section className="py-16 bg-[#E9F2FF]">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1">
               <h2 className="text-[40px] leading-[45px] font-bold text-primary mb-4">
@@ -310,7 +325,7 @@ export default async function HomePage() {
               </p>
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 bg-secondary text-white px-8 py-5 rounded-[12px] text-[15px] leading-[26px] font-medium hover:bg-secondary/90 transition-all hover:scale-105"
+                className="inline-flex items-center justify-center gap-2 bg-secondary text-white px-8 py-5 min-h-[54px] rounded-[12px] text-[15px] leading-[26px] font-medium hover:bg-secondary/90 transition-all hover:scale-105"
               >
                 Get Your Valuation
                 <ArrowRight className="w-5 h-5" />
@@ -330,7 +345,7 @@ export default async function HomePage() {
 
       {/* Why Choose Us Section */}
       <section className="bg-white py-16">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-6 lg:px-8">
           <h2 className="text-[40px] leading-[45px] font-bold text-primary text-center mb-12">
             Why Choose Prime Deal Auto?
           </h2>

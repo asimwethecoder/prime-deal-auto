@@ -2,6 +2,7 @@
 
 // Header Component - Site-wide navigation
 // Home: transparent over hero, solid primary on scroll. Other pages: always solid primary (#050B20) with white text.
+// Mobile: inline menu below header bar (no full-screen overlay).
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -39,6 +40,12 @@ export function Header() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHomePage]);
+
+  useEffect(() => {
+    const openMenu = () => setMobileMenuOpen(true);
+    window.addEventListener('open-mobile-menu', openMenu);
+    return () => window.removeEventListener('open-mobile-menu', openMenu);
+  }, []);
 
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -122,7 +129,7 @@ export function Header() {
     );
   };
 
-  // Render mobile auth section
+  // Render mobile auth section (inline below header, white text)
   const renderMobileAuthSection = () => {
     if (isLoading) {
       return (
@@ -132,32 +139,23 @@ export function Header() {
       );
     }
 
+    const linkClass = 'min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3';
+
     if (isAuthenticated && user) {
       return (
         <>
           {isStaff ? (
-            <Link 
-              href="/dashboard" 
-              className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3" 
-              onClick={closeMobileMenu}
-            >
+            <Link href="/dashboard" className={linkClass} onClick={closeMobileMenu}>
               <LayoutDashboard className="w-4 h-4" aria-hidden />
               Dashboard
             </Link>
           ) : (
-            <Link 
-              href="/dashboard" 
-              className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3" 
-              onClick={closeMobileMenu}
-            >
+            <Link href="/dashboard" className={linkClass} onClick={closeMobileMenu}>
               <User className="w-4 h-4" aria-hidden />
               My Account
             </Link>
           )}
-          <button 
-            onClick={handleSignOut}
-            className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3 w-full text-left"
-          >
+          <button onClick={handleSignOut} className={`${linkClass} w-full text-left`}>
             <LogOut className="w-4 h-4" aria-hidden />
             Sign Out
           </button>
@@ -167,47 +165,48 @@ export function Header() {
 
     return (
       <>
-        <Link href="/login" className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+        <Link href="/login" className={linkClass} onClick={closeMobileMenu}>
           <Icon src="signin-svgrepo-com.svg" width={18} height={18} className="invert" aria-hidden />
           Sign In
         </Link>
-        <Link href="/register" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+        <Link href="/register" className={linkClass} onClick={closeMobileMenu}>
           Register
         </Link>
       </>
     );
   };
 
+  // On home: when mobile menu is open, use relative + solid bg so nav pushes hero/search down (no overlay conflict)
+  const isHomeWithMenuOpen = isHomePage && mobileMenuOpen;
+  const headerPosition =
+    isHomeWithMenuOpen
+      ? 'relative top-0 left-0 right-0 bg-primary border-b border-white/10'
+      : isTransparent
+        ? 'absolute top-0 left-0 right-0 bg-transparent'
+        : 'sticky top-0 left-0 right-0 bg-primary border-b border-primary';
+
   return (
     <header
-      className={`z-[100] transition-colors duration-300 ${
-        isTransparent
-          ? 'absolute top-0 left-0 right-0 bg-transparent'
-          : 'sticky top-0 left-0 right-0 bg-primary border-b border-primary'
-      }`}
+      className={`z-[100] transition-colors duration-300 ${headerPosition}`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Left: Logo + Search pill */}
-          <div className="flex items-center gap-6 flex-1 min-w-0">
-            <Link
-              href="/"
-              className={logoClass}
-              aria-label="Prime Deal Auto Home"
-            >
-              <span
-                className={`inline-flex items-center justify-center rounded-lg overflow-hidden ${!isTransparent ? 'bg-white px-2 py-1.5' : ''}`}
-              >
-                <Image
-                  src="/logo/primedealautologo.jpeg"
-                  alt="Prime Deal Auto"
-                  width={150}
-                  height={50}
-                  priority
-                  className="h-[50px] w-auto rounded-lg max-h-[50px] object-contain"
-                />
-              </span>
-            </Link>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Left: Logo + Search pill */}
+            <div className="flex items-center gap-6 flex-1 min-w-0">
+              <Link href="/" className={logoClass} aria-label="Prime Deal Auto Home">
+                <span
+                  className={`inline-flex items-center justify-center rounded-lg overflow-hidden ${!isTransparent ? 'bg-white px-2 py-1.5' : ''}`}
+                >
+                  <Image
+                    src="/logo/primedealautologo.jpeg"
+                    alt="Prime Deal Auto"
+                    width={150}
+                    height={50}
+                    priority
+                    className="h-[50px] w-auto rounded-lg max-h-[50px] object-contain"
+                  />
+                </span>
+              </Link>
             <Link
               href="/cars"
               className={`hidden lg:flex shrink-0 ${searchPillClass}`}
@@ -264,14 +263,14 @@ export function Header() {
           </button>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - inline below header; solid bg + shadow so it doesn’t conflict with hero/search */}
         {mobileMenuOpen && (
           <nav
-            className="lg:hidden py-4 border-t border-white/20"
+            className="lg:hidden py-4 px-4 sm:px-6 border-t border-white/20 bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
             role="navigation"
             aria-label="Mobile navigation"
           >
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-0.5">
               <Link href="/" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
                 Home
               </Link>

@@ -13,21 +13,27 @@ import { CarWithImages } from '@/lib/api/types';
 import { formatPrice, formatMileage } from '@/lib/utils/format';
 
 const MAX_DOTS = 7;
+const CLOUDFRONT_BASE = process.env.NEXT_PUBLIC_CLOUDFRONT_URL ?? 'https://dyzz4logwgput.cloudfront.net';
 
 interface CarCardDarkProps {
   car: CarWithImages;
   badge?: string;
   originalPrice?: number;
+  /** Set true for above-the-fold cards to load image immediately */
+  priority?: boolean;
 }
 
-export function CarCardDark({ car, badge, originalPrice }: CarCardDarkProps) {
+export function CarCardDark({ car, badge, originalPrice, priority }: CarCardDarkProps) {
   const images = car.images?.length ? car.images : [];
   const primaryIndex = images.findIndex((img) => img.is_primary);
   const [currentIndex, setCurrentIndex] = useState(primaryIndex >= 0 ? primaryIndex : 0);
   const currentImage = images[currentIndex] || images[0];
-  
-  // Use cloudfront_url from images array, or fall back to primary_image_url from search API
-  const imageUrl = currentImage?.cloudfront_url || car.primary_image_url || '/placeholder-car.jpg';
+
+  const rawUrl = currentImage?.cloudfront_url || car.primary_image_url || '/placeholder-car.jpg';
+  const imageUrl =
+    rawUrl.startsWith('http') || rawUrl === '/placeholder-car.jpg'
+      ? rawUrl
+      : `${CLOUDFRONT_BASE}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`;
 
   const showGreatPrice = originalPrice != null && originalPrice > car.price;
   const lowMileageBadge = car.mileage < 80000 ? 'Low Mileage' : undefined;
@@ -64,6 +70,7 @@ export function CarCardDark({ car, badge, originalPrice }: CarCardDarkProps) {
               src={imageUrl}
               alt={`${car.year} ${car.make} ${car.model}`}
               fill
+              priority={priority}
               className="object-cover transition-opacity duration-200"
               sizes="340px"
             />

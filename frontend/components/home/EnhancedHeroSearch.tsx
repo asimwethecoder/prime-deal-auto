@@ -132,14 +132,14 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
     <div className="w-full max-w-5xl mx-auto">
       {/* Enhanced Search Bar with Cascading Dropdowns */}
       <div className="relative" ref={dropdownRef}>
-        <div className="flex flex-nowrap items-stretch divide-x divide-slate-200 bg-white rounded-full shadow-lg min-h-[56px]">
+        <div className="flex flex-col md:flex-row md:flex-nowrap items-stretch gap-3 md:gap-0 md:divide-x divide-slate-200 bg-white rounded-[12px] md:rounded-full shadow-[0px_10px_40px_rgba(0,0,0,0.05)] md:shadow-lg min-h-0 md:min-h-[56px] p-3 md:p-0">
           
-          {/* Make Dropdown */}
-          <div className="flex-1 min-w-0 relative rounded-l-full bg-white">
+          {/* Make Dropdown - 12px radius on mobile */}
+          <div className="flex-1 min-w-0 relative rounded-[12px] md:rounded-l-full bg-white border border-slate-200 md:border-0">
             <button
               type="button"
               onClick={() => toggleDropdown('make')}
-              className="w-full h-full flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[#050B20] text-[15px] truncate hover:bg-[#F9FBFC] transition-colors cursor-pointer rounded-l-full"
+              className="w-full h-full min-h-[48px] flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[#050B20] text-[15px] truncate hover:bg-[#F9FBFC] transition-colors cursor-pointer rounded-[12px] md:rounded-l-full"
             >
               <span className="truncate font-normal">
                 {selectedMake || 'Makes'}
@@ -187,14 +187,14 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
             )}
           </div>
 
-          {/* Model Dropdown */}
-          <div className="flex-1 min-w-0 relative bg-white">
+          {/* Model Dropdown - 12px radius on mobile */}
+          <div className="flex-1 min-w-0 relative bg-white border border-slate-200 md:border-0 rounded-[12px] md:rounded-none">
             <button
               type="button"
               onClick={() => toggleDropdown('model')}
               disabled={!selectedMake}
               className={cn(
-                "w-full h-full flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[15px] truncate transition-colors cursor-pointer",
+                "w-full h-full min-h-[48px] flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[15px] truncate transition-colors cursor-pointer rounded-[12px] md:rounded-none",
                 selectedMake 
                   ? "text-[#050B20] hover:bg-[#F9FBFC]" 
                   : "text-gray-400 cursor-not-allowed"
@@ -250,13 +250,13 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
           </div>
 
           {/* Variant Dropdown */}
-          <div className="flex-1 min-w-0 relative bg-white">
+          <div className="flex-1 min-w-0 relative bg-white border border-slate-200 md:border-0 rounded-xl md:rounded-none">
             <button
               type="button"
               onClick={() => toggleDropdown('variant')}
               disabled={!selectedMake || !selectedModel}
               className={cn(
-                "w-full h-full flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[15px] truncate transition-colors cursor-pointer",
+                "w-full h-full min-h-[48px] flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[15px] truncate transition-colors cursor-pointer rounded-[12px] md:rounded-none",
                 (selectedMake && selectedModel)
                   ? "text-[#050B20] hover:bg-[#F9FBFC]" 
                   : "text-gray-400 cursor-not-allowed"
@@ -312,11 +312,11 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
           </div>
 
           {/* Min Price Dropdown */}
-          <div className="flex-1 min-w-0 relative bg-white">
+          <div className="flex-1 min-w-0 relative bg-white border border-slate-200 md:border-0 rounded-xl md:rounded-none">
             <button
               type="button"
               onClick={() => toggleDropdown('minPrice')}
-              className="w-full h-full flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[#050B20] text-[15px] truncate hover:bg-[#F9FBFC] transition-colors cursor-pointer"
+              className="w-full h-full min-h-[48px] flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[#050B20] text-[15px] truncate hover:bg-[#F9FBFC] transition-colors cursor-pointer rounded-[12px] md:rounded-none"
             >
               <span className="truncate font-normal">
                 {minPrice ? formatPrice(minPrice) : 'Min Price'}
@@ -351,11 +351,11 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
           </div>
 
           {/* Max Price Dropdown */}
-          <div className="flex-1 min-w-0 relative bg-white">
+          <div className="flex-1 min-w-0 relative bg-white border border-slate-200 md:border-0 rounded-xl md:rounded-none">
             <button
               type="button"
               onClick={() => toggleDropdown('maxPrice')}
-              className="w-full h-full flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[#050B20] text-[15px] truncate hover:bg-[#F9FBFC] transition-colors cursor-pointer"
+              className="w-full h-full min-h-[48px] flex items-center gap-2 px-3 sm:px-4 py-3 text-left text-[#050B20] text-[15px] truncate hover:bg-[#F9FBFC] transition-colors cursor-pointer rounded-[12px] md:rounded-none"
             >
               <span className="truncate font-normal">
                 {maxPrice ? formatPrice(maxPrice) : 'Max Price'}
@@ -389,10 +389,10 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
             )}
           </div>
 
-          {/* Search Button - Pill style */}
+          {/* Search Button - Pill style (desktop), 54px height */}
           <Link
             href={searchHref}
-            className="flex items-center justify-center gap-2 bg-[#405FF2] text-white px-6 py-3 rounded-[120px] font-medium text-[15px] hover:bg-[#3651E0] transition-colors shrink-0 min-w-[140px] max-md:hidden"
+            className="flex items-center justify-center gap-2 bg-[#405FF2] text-white px-6 py-3 min-h-[54px] rounded-[120px] font-medium text-[15px] hover:bg-[#3651E0] transition-colors shrink-0 min-w-[140px] max-md:hidden"
           >
             <DynamicIcon 
               name="search-alt-2-svgrepo-com" 
@@ -404,10 +404,10 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
           </Link>
         </div>
 
-        {/* Mobile Search Button - Full width below the filter bar */}
+        {/* Mobile Search Button - Full width, 54px height, #405FF2, 12px radius */}
         <Link
           href={searchHref}
-          className="md:hidden flex items-center justify-center gap-2 bg-[#405FF2] text-white w-full py-4 mt-3 rounded-[120px] font-medium text-[15px] hover:bg-[#3651E0] transition-colors"
+          className="md:hidden flex items-center justify-center gap-2 bg-[#405FF2] text-white w-full min-h-[54px] mt-3 rounded-[12px] font-medium text-[15px] hover:bg-[#3651E0] transition-colors"
         >
           <DynamicIcon 
             name="search-alt-2-svgrepo-com" 
