@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const CLOUDFRONT_URL = process.env.NEXT_PUBLIC_CLOUDFRONT_URL || 'https://dyzz4logwgput.cloudfront.net';
+
 const HERO_IMAGES = [
-  '/images/hero/hero1.jpg',
-  '/images/hero/hero2.jpg',
-  '/images/hero/hero3.jpg',
-  '/images/hero/hero4.jpg',
-  '/images/hero/hero5.jpg',
-  '/images/hero/hero6.jpg',
+  `${CLOUDFRONT_URL}/static/hero/hero1.jpg`,
+  `${CLOUDFRONT_URL}/static/hero/hero2.jpg`,
+  `${CLOUDFRONT_URL}/static/hero/hero3.jpg`,
+  `${CLOUDFRONT_URL}/static/hero/hero4.jpg`,
+  `${CLOUDFRONT_URL}/static/hero/hero5.jpg`,
+  `${CLOUDFRONT_URL}/static/hero/hero6.jpg`,
 ];
 
 const ROTATE_INTERVAL_MS = 5500;

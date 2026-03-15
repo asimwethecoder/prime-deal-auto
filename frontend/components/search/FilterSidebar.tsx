@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
 import { Check, ChevronDown } from 'lucide-react';
+import { AISearchBar } from '@/components/search/AISearchBar';
 import type { FacetResult } from '@/lib/api/search';
 import type { SearchParams } from '@/lib/api/search';
 
@@ -331,6 +332,17 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
         )}
       </div>
 
+      {/* AI-Powered Natural Language Search */}
+      <div className="pb-6 mb-6 border-b border-border">
+        <AISearchBar 
+          placeholder='Try "SUVs under R300k"'
+          className="w-full"
+        />
+        <p className="mt-2 text-[13px] text-primary/60 text-center">
+          or use filters below
+        </p>
+      </div>
+
       {/* Figma order: Condition, Type, Make, Model, Variant, Year, Price, Transmission, Fuel Type */}
 
       <FacetList
@@ -490,6 +502,15 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
         items={facets.fuel_type ?? []}
         searchParams={searchParams}
       />
+
+      {/* Prominent Search Button */}
+      <button
+        type="button"
+        onClick={applyRangeFilters}
+        className="w-full min-h-[44px] px-6 py-3 text-[15px] font-medium text-white bg-secondary rounded-[12px] hover:bg-secondary/90 transition-colors"
+      >
+        Search
+      </button>
     </aside>
   );
 }

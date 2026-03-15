@@ -76,7 +76,7 @@ export default async function HomePage() {
         <div className="col-start-1 row-start-1 z-10 flex flex-col items-center justify-center w-full px-4 sm:px-6 lg:px-8 py-16">
           <div className="w-full max-w-[1400px] mx-auto text-center">
             <h1 className="text-5xl sm:text-6xl lg:text-[70px] lg:leading-[91px] font-extrabold text-white mb-4">
-              Find Your Perfect Car
+              Prime Deal Auto
             </h1>
             <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto font-normal mb-10">
               Quality used cars at unbeatable prices.

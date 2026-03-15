@@ -7,6 +7,7 @@ import {
   handleFacets,
   handleSuggestions,
   handleReindex,
+  handleIntent,
 } from './handlers/search.handler';
 import {
   handleGenerateUploadUrl,
@@ -68,6 +69,7 @@ const routes: Route[] = [
   { method: 'GET', pattern: /^\/search$/, handler: handleSearch },
   { method: 'GET', pattern: /^\/search\/facets$/, handler: handleFacets },
   { method: 'GET', pattern: /^\/search\/suggestions$/, handler: handleSuggestions },
+  { method: 'POST', pattern: /^\/search\/intent$/, handler: handleIntent },
   { method: 'POST', pattern: /^\/admin\/reindex$/, handler: handleReindex },
 ];
 

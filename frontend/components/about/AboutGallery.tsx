@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 
+const CLOUDFRONT_URL = process.env.NEXT_PUBLIC_CLOUDFRONT_URL || 'https://dyzz4logwgput.cloudfront.net';
+
 const GALLERY_IMAGES = [
-  { src: '/images/about/about-img-primedealuto01.png', alt: 'Prime Deal Auto', slot: 'tall' as const },
-  { src: '/images/about/About-img-primedeal3.jpg', alt: 'Prime Deal Auto', slot: 'wide' as const },
-  { src: '/images/about/About-img-primedeal4.jpg', alt: 'Prime Deal Auto', slot: 'square' as const },
-  { src: '/images/about/About-img-primedeal5.jpg', alt: 'Prime Deal Auto', slot: 'square' as const },
-  { src: '/images/about/About-img-primedeal.png', alt: 'Prime Deal Auto', slot: 'wider' as const },
+  { src: `${CLOUDFRONT_URL}/static/about/about-img-primedealuto01.png`, alt: 'Prime Deal Auto', slot: 'tall' as const },
+  { src: `${CLOUDFRONT_URL}/static/about/About-img-primedeal3.jpg`, alt: 'Prime Deal Auto', slot: 'wide' as const },
+  { src: `${CLOUDFRONT_URL}/static/about/About-img-primedeal4.jpg`, alt: 'Prime Deal Auto', slot: 'square' as const },
+  { src: `${CLOUDFRONT_URL}/static/about/About-img-primedeal5.jpg`, alt: 'Prime Deal Auto', slot: 'square' as const },
+  { src: `${CLOUDFRONT_URL}/static/about/About-img-primedeal.png`, alt: 'Prime Deal Auto', slot: 'wider' as const },
 ];
 
 const container = {

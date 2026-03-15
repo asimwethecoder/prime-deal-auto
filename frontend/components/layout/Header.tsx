@@ -8,6 +8,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { User, LogOut, LayoutDashboard } from 'lucide-react';
 
 const SCROLL_THRESHOLD = 10;
 
@@ -15,9 +17,20 @@ export function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  
+  // Auth state from Zustand store
+  const { isAuthenticated, isLoading, user, role, initialize, signOut } = useAuthStore();
 
   const isHomePage = pathname === '/';
   const isTransparent = isHomePage && !scrolled;
+  
+  // Check if user is staff (admin or dealer)
+  const isStaff = role === 'admin' || role === 'dealer';
+
+  // Initialize auth state on mount
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
   useEffect(() => {
     if (!isHomePage) return;
@@ -30,6 +43,11 @@ export function Header() {
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
+  const handleSignOut = async () => {
+    await signOut();
+    closeMobileMenu();
+  };
+
   const navLinkClass = isTransparent
     ? 'text-white hover:text-white/90 transition-colors font-medium text-[15px]'
     : 'text-white hover:text-white/90 transition-colors font-medium text-[15px]';
@@ -37,6 +55,128 @@ export function Header() {
     ? 'flex items-center gap-2 text-white/90 hover:text-white text-sm border border-white/30 rounded-full pl-3 pr-4 py-2 min-w-[200px] bg-white/5'
     : 'flex items-center gap-2 text-white/90 hover:text-white text-sm border border-white/30 rounded-full pl-3 pr-4 py-2 min-w-[200px] bg-white/5';
   const logoClass = 'flex items-center hover:opacity-90 transition-opacity';
+
+  // Render auth section based on state
+  const renderAuthSection = () => {
+    // Show loading skeleton while checking auth
+    if (isLoading) {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="w-20 h-8 bg-white/10 rounded animate-pulse" />
+        </div>
+      );
+    }
+
+    // Authenticated user
+    if (isAuthenticated && user) {
+      return (
+        <>
+          {isStaff ? (
+            <Link
+              href="/dashboard"
+              className={`flex items-center gap-2 ${navLinkClass}`}
+            >
+              <LayoutDashboard className="w-4 h-4" aria-hidden />
+              Dashboard
+            </Link>
+          ) : (
+            <Link
+              href="/dashboard"
+              className={`flex items-center gap-2 ${navLinkClass}`}
+            >
+              <User className="w-4 h-4" aria-hidden />
+              My Account
+            </Link>
+          )}
+          <button
+            onClick={handleSignOut}
+            className={`flex items-center gap-2 ${navLinkClass}`}
+          >
+            <LogOut className="w-4 h-4" aria-hidden />
+            Sign Out
+          </button>
+        </>
+      );
+    }
+
+    // Not authenticated
+    return (
+      <>
+        <Link
+          href="/login"
+          className={`flex items-center gap-2 ${navLinkClass}`}
+        >
+          <Icon
+            src="signin-svgrepo-com.svg"
+            width={18}
+            height={18}
+            className="invert shrink-0"
+            aria-hidden
+          />
+          Sign In
+        </Link>
+        <Link href="/register" className={navLinkClass}>
+          Register
+        </Link>
+      </>
+    );
+  };
+
+  // Render mobile auth section
+  const renderMobileAuthSection = () => {
+    if (isLoading) {
+      return (
+        <div className="min-h-[44px] flex items-center">
+          <div className="w-24 h-6 bg-white/10 rounded animate-pulse" />
+        </div>
+      );
+    }
+
+    if (isAuthenticated && user) {
+      return (
+        <>
+          {isStaff ? (
+            <Link 
+              href="/dashboard" 
+              className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3" 
+              onClick={closeMobileMenu}
+            >
+              <LayoutDashboard className="w-4 h-4" aria-hidden />
+              Dashboard
+            </Link>
+          ) : (
+            <Link 
+              href="/dashboard" 
+              className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3" 
+              onClick={closeMobileMenu}
+            >
+              <User className="w-4 h-4" aria-hidden />
+              My Account
+            </Link>
+          )}
+          <button 
+            onClick={handleSignOut}
+            className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3 w-full text-left"
+          >
+            <LogOut className="w-4 h-4" aria-hidden />
+            Sign Out
+          </button>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Link href="/login" className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+          <Icon src="signin-svgrepo-com.svg" width={18} height={18} className="invert" aria-hidden />
+          Sign In
+        </Link>
+        <Link href="/register" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+          Register
+        </Link>
+      </>
+    );
+  };
 
   return (
     <header
@@ -61,10 +201,10 @@ export function Header() {
                 <Image
                   src="/logo/primedealautologo.jpeg"
                   alt="Prime Deal Auto"
-                  width={120}
-                  height={40}
+                  width={150}
+                  height={50}
                   priority
-                  className="h-10 w-auto rounded-lg max-h-10 object-contain"
+                  className="h-[50px] w-auto rounded-lg max-h-[50px] object-contain"
                 />
               </span>
             </Link>
@@ -83,7 +223,7 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Right: Nav links + Sign in + Add Listing */}
+          {/* Right: Nav links + Auth section + Add Listing */}
           <div className="hidden lg:flex items-center gap-6 flex-shrink-0">
             <nav className="flex items-center gap-6" role="navigation" aria-label="Main navigation">
               <Link href="/" className={navLinkClass}>
@@ -99,22 +239,7 @@ export function Header() {
                 Contact
               </Link>
             </nav>
-            <Link
-              href="/login"
-              className={`flex items-center gap-2 ${navLinkClass}`}
-            >
-              <Icon
-                src="signin-svgrepo-com.svg"
-                width={18}
-                height={18}
-                className="invert shrink-0"
-                aria-hidden
-              />
-              Sign In
-            </Link>
-            <Link href="/register" className={navLinkClass}>
-              Register
-            </Link>
+            {renderAuthSection()}
             <Link
               href="/ad-listing"
               className="bg-white text-primary px-6 py-2.5 rounded-full text-[15px] font-medium hover:bg-white/90 transition-colors shrink-0"
@@ -159,13 +284,7 @@ export function Header() {
               <Link href="/contact" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
                 Contact
               </Link>
-              <Link href="/login" className="min-h-[44px] flex items-center gap-2 text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
-                <Icon src="signin-svgrepo-com.svg" width={18} height={18} className="invert" aria-hidden />
-                Sign In
-              </Link>
-              <Link href="/register" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
-                Register
-              </Link>
+              {renderMobileAuthSection()}
               <Link
                 href="/ad-listing"
                 className="min-h-[44px] flex items-center justify-center bg-white text-primary px-6 py-3 rounded-full text-[15px] font-medium hover:bg-white/90 transition-colors mt-2"

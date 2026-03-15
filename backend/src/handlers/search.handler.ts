@@ -3,6 +3,8 @@ import { SearchService, ValidationError } from '../services/search.service';
 import { SearchRepository, SearchFilters } from '../repositories/search.repository';
 import { CarRepository } from '../repositories/cars.repository';
 import { OpenSearchError } from '../lib/opensearch';
+import { getBedrockClient } from '../lib/bedrock';
+import { ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
 
 // Initialize service instances outside handler for reuse across warm invocations
 const searchRepository = new SearchRepository();
@@ -239,6 +241,194 @@ export async function handleReindex(
     };
   } catch (error) {
     return handleError(error);
+  }
+}
+
+/**
+ * System prompt for intent parsing - extracts structured filters from natural language
+ */
+const INTENT_PARSING_SYSTEM_PROMPT = `You are a car search intent parser for Prime Deal Auto, a South African car dealership.
+Extract structured filters from natural language queries.
+
+Price format: South African Rand (ZAR). "R300k" = 300000, "R1.5M" = 1500000, "300000" = 300000
+Body types: SUV, Sedan, Hatchback, Bakkie, Coupe, Convertible, Wagon
+Fuel types: petrol, diesel, electric, hybrid
+Transmissions: automatic, manual, cvt
+
+Common patterns:
+- "under R300k" or "below R300k" → maxPrice: 300000
+- "above R200k" or "over R200k" → minPrice: 200000
+- "between R200k and R400k" → minPrice: 200000, maxPrice: 400000
+- "2020 or newer" → minYear: 2020
+- "older than 2018" → maxYear: 2017
+- Brand names like "Toyota", "BMW", "Mercedes" → make
+- Model names like "Corolla", "X5", "C-Class" → model
+
+Return ONLY valid JSON with this exact structure (no markdown, no explanation):
+{
+  "filters": {
+    "make": "string or null",
+    "model": "string or null",
+    "bodyType": "string or null",
+    "minPrice": "number or null",
+    "maxPrice": "number or null",
+    "minYear": "number or null",
+    "maxYear": "number or null",
+    "fuelType": "string or null",
+    "transmission": "string or null"
+  },
+  "confidence": 0.0 to 1.0
+}
+
+Only include fields you can confidently extract. Set confidence based on how clear the query is.
+If the query is unclear or doesn't contain recognizable car search terms, return empty filters with confidence: 0.`;
+
+/**
+ * POST /search/intent - Parse natural language query into structured filters
+ * 
+ * Request body:
+ * - query: natural language search query (required)
+ * 
+ * Returns: Extracted filters with confidence score
+ * 
+ * Requirements: UAT 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8
+ */
+export async function handleIntent(
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*'
+  };
+
+  try {
+    // Parse request body
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Missing request body',
+          code: 'VALIDATION_ERROR'
+        })
+      };
+    }
+
+    let body: { query?: string };
+    try {
+      body = JSON.parse(event.body);
+    } catch {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Invalid JSON in request body',
+          code: 'VALIDATION_ERROR'
+        })
+      };
+    }
+
+    const { query } = body;
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Missing required field: query',
+          code: 'VALIDATION_ERROR'
+        })
+      };
+    }
+
+    // Call Bedrock to parse intent
+    const client = getBedrockClient();
+    const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-pro-v1:0';
+
+    const command = new ConverseCommand({
+      modelId,
+      messages: [
+        {
+          role: 'user',
+          content: [{ text: `Parse this car search query: "${query.trim()}"` }]
+        }
+      ],
+      system: [{ text: INTENT_PARSING_SYSTEM_PROMPT }],
+      inferenceConfig: {
+        maxTokens: 512,
+        temperature: 0 // Greedy decoding for consistent structured output
+      }
+    });
+
+    const response = await client.send(command);
+    
+    // Extract text response
+    const outputMessage = response.output?.message;
+    const textContent = outputMessage?.content?.find(
+      (block: any) => 'text' in block
+    );
+    const responseText = textContent?.text || '';
+
+    // Parse JSON from response
+    let parsedResult: {
+      filters: Record<string, any>;
+      confidence: number;
+    };
+
+    try {
+      // Try to extract JSON from the response (handle potential markdown wrapping)
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in response');
+      }
+      parsedResult = JSON.parse(jsonMatch[0]);
+    } catch {
+      console.error('Failed to parse Bedrock response:', responseText);
+      // Return fallback with low confidence
+      parsedResult = {
+        filters: {},
+        confidence: 0
+      };
+    }
+
+    // Clean up filters - remove null values
+    const cleanFilters: Record<string, any> = {};
+    for (const [key, value] of Object.entries(parsedResult.filters || {})) {
+      if (value !== null && value !== undefined && value !== '') {
+        cleanFilters[key] = value;
+      }
+    }
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        data: {
+          filters: cleanFilters,
+          confidence: parsedResult.confidence || 0,
+          fallbackQuery: parsedResult.confidence < 0.3 ? query.trim() : undefined
+        }
+      })
+    };
+  } catch (error) {
+    console.error('Intent parsing error:', error);
+    
+    // Return graceful fallback on any error
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        data: {
+          filters: {},
+          confidence: 0,
+          fallbackQuery: event.body ? JSON.parse(event.body).query : undefined
+        }
+      })
+    };
   }
 }
 

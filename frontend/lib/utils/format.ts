@@ -3,12 +3,15 @@
 
 /**
  * Format price in South African Rand (ZAR) with R prefix
+ * Handles both number and string inputs (PostgreSQL DECIMAL returns strings)
+ * Always displays as whole number with space as thousands separator
  * 
- * @param price - Price in ZAR
- * @returns Formatted price string (e.g., "R250,000")
+ * @param price - Price in ZAR (number or string from database)
+ * @returns Formatted price string (e.g., "R290 000")
  */
-export function formatPrice(price: number): string {
-  return `R${price.toLocaleString('en-ZA')}`;
+export function formatPrice(price: number | string): string {
+  const numericPrice = Math.round(Number(price));
+  return `R${numericPrice.toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`;
 }
 
 /** Alias for formatPrice — format value as South African Rand (ZAR). */

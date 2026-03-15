@@ -1,7 +1,7 @@
 // Search API Module
 // Functions for interacting with the search endpoints
 
-import { get } from './client';
+import { get, post } from './client';
 import { CarWithImages, PaginatedResponse } from './types';
 
 /**
@@ -124,4 +124,40 @@ export async function getVariantsForModel(make: string, model: string): Promise<
     make,
     model 
   });
+}
+
+
+/**
+ * Parsed intent filters from natural language query
+ */
+export interface ParsedIntentFilters {
+  make?: string;
+  model?: string;
+  bodyType?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minYear?: number;
+  maxYear?: number;
+  fuelType?: 'petrol' | 'diesel' | 'electric' | 'hybrid';
+  transmission?: 'automatic' | 'manual' | 'cvt';
+}
+
+/**
+ * Intent parsing response
+ */
+export interface IntentResponse {
+  filters: ParsedIntentFilters;
+  confidence: number;
+  fallbackQuery?: string;
+}
+
+/**
+ * Parse natural language search query into structured filters
+ * Uses Bedrock AI to extract intent from queries like "SUVs under R300k"
+ * 
+ * @param query - Natural language search query
+ * @returns Extracted filters with confidence score
+ */
+export async function parseSearchIntent(query: string): Promise<IntentResponse> {
+  return post<IntentResponse>('/search/intent', { query });
 }
