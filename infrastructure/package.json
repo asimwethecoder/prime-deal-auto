@@ -5,9 +5,9 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest --run",
-    "synth": "cdk synth",
+    "synth": "cdk synth --profile prime-deal-auto",
     "deploy": "npm run deploy:guard -- && cdk deploy --all --require-approval never --profile prime-deal-auto",
-    "deploy:guard": "node -e \"const { execSync } = require('child_process'); const account = execSync('aws sts get-caller-identity --profile prime-deal-auto --query Account --output text').toString().trim(); const required = '141814481613'; if (account !== required) { console.error('Wrong account: ' + account + '. Required: ' + required); process.exit(1); } console.log('Deploy target account: ' + account);\"",
+    "deploy:guard": "node -e \"const { execSync } = require('child_process'); const profile = 'prime-deal-auto'; const requiredAccount = '141814481613'; const account = execSync('aws sts get-caller-identity --profile ' + profile + ' --query Account --output text').toString().trim(); if (account !== requiredAccount) { console.error('Wrong account: ' + account + '. Required: ' + requiredAccount + '. Use profile: ' + profile); process.exit(1); } console.log('Using profile: ' + profile + ', deploy target account: ' + account);\"",
     "deploy:database": "npm run deploy:guard -- && cdk deploy PrimeDeals-Database --require-approval never --profile prime-deal-auto",
     "deploy:api": "npm run deploy:guard -- && cdk deploy PrimeDeals-Api --require-approval never --profile prime-deal-auto",
     "diff": "cdk diff --profile prime-deal-auto",

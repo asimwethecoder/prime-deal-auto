@@ -62,8 +62,8 @@ export class CarService {
       offset,
       sortBy: input.sortBy || 'created_at',
       sortOrder: input.sortOrder || 'desc',
-      // If status is provided (admin), use it; otherwise default to 'active' for public
-      status: input.status || 'active',
+      // Public (no status param) => 'active'; admin sends 'all' or specific status
+      status: input.status === undefined ? 'active' : input.status,
     };
 
     const { cars, total } = await this.repository.findAll(filters);

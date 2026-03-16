@@ -88,13 +88,12 @@ export class CarRepository {
     const params: unknown[] = [];
     let paramIndex = 1;
 
-    // Status filter: if provided, filter by it; if undefined, show all non-deleted (for admin "All" view)
-    if (filters.status) {
+    // Status filter: 'all' or undefined => all non-deleted; specific status => filter by it
+    if (filters.status && filters.status !== 'all') {
       conditions.push(`c.status = $${paramIndex}`);
       params.push(filters.status);
       paramIndex++;
     } else {
-      // When no status filter, show all except deleted (for admin "All" view)
       conditions.push(`c.status != 'deleted'`);
     }
 

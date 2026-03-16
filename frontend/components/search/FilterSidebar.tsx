@@ -387,6 +387,8 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
         <h3 className="text-[18px] font-medium text-primary mb-3">Year</h3>
         <div className="flex gap-2 items-center">
           <input
+            id="filter-min-year"
+            name="minYear"
             type="number"
             placeholder="Min"
             min={1990}
@@ -397,6 +399,8 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
           />
           <span className="text-primary/60">–</span>
           <input
+            id="filter-max-year"
+            name="maxYear"
             type="number"
             placeholder="Max"
             min={1990}
@@ -420,6 +424,8 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
         <h3 className="text-[18px] font-medium text-primary mb-3">Price</h3>
         <div className="flex gap-2 items-center mb-3">
           <input
+            id="filter-min-price"
+            name="minPrice"
             type="number"
             placeholder="Min price"
             value={minPrice}
@@ -432,6 +438,8 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
           />
           <span className="text-primary/60 shrink-0">–</span>
           <input
+            id="filter-max-price"
+            name="maxPrice"
             type="number"
             placeholder="Max price"
             value={maxPrice}
@@ -451,6 +459,8 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
         </div>
         <div className="flex flex-col gap-2 mt-2">
           <input
+            id="filter-price-range-min"
+            name="priceMin"
             type="range"
             min={PRICE_MIN}
             max={PRICE_MAX}
@@ -461,6 +471,8 @@ export function FilterSidebar({ currentFilters, facets, className }: FilterSideb
             aria-label="Min price"
           />
           <input
+            id="filter-price-range-max"
+            name="priceMax"
             type="range"
             min={PRICE_MIN}
             max={PRICE_MAX}

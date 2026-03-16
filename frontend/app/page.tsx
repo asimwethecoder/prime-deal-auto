@@ -83,7 +83,7 @@ export default async function HomePage() {
               </p>
             </div>
             {/* 2. AI Search Bar (Tier 1) - mobile only; rounded-full, white, sh-3 shadow */}
-            <div className="w-full max-w-[1400px] mx-auto md:hidden" id="hero-search">
+            <div className="w-full max-w-[1400px] mx-auto md:hidden" id="hero-search" data-cursor-magnetic>
               <AISearchBar
                 placeholder='Search e.g. "SUVs under R300k"'
                 className="max-w-xl mx-auto w-full min-w-0"
@@ -93,7 +93,7 @@ export default async function HomePage() {
             </div>
             <p className="text-white/80 text-sm font-normal text-center md:hidden -mt-2">Or search by</p>
             {/* 3. Classic Filters (Tier 2) - gap-y-4 on mobile, 12px radius */}
-            <div className="w-full max-w-[1400px] mx-auto flex justify-center gap-y-4 md:gap-y-0">
+            <div className="w-full max-w-[1400px] mx-auto flex justify-center gap-y-4 md:gap-y-0" data-cursor-magnetic>
               <EnhancedHeroSearch totalCount={carCount} />
             </div>
           </div>

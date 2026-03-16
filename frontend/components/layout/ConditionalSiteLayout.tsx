@@ -60,6 +60,7 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
               href="/"
               className={`flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 ${isHome ? 'text-[#405FF2]' : 'text-[#050B20]/40'}`}
               aria-current={isHome ? 'page' : undefined}
+              data-cursor-magnetic
             >
               <span className="inline-block shrink-0" style={isHome ? { filter: ACTIVE_ICON_FILTER } : { opacity: 0.4 }}>
                 <Icon src="home-1-svgrepo-com.svg" width={24} height={24} aria-hidden />
@@ -71,6 +72,7 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
               href="/cars"
               className={`flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 ${isCars ? 'text-[#405FF2]' : 'text-[#050B20]/40'}`}
               aria-current={isCars ? 'page' : undefined}
+              data-cursor-magnetic
             >
               <span className="inline-block shrink-0" style={isCars ? { filter: ACTIVE_ICON_FILTER } : { opacity: 0.4 }}>
                 <Icon src="car-svgrepo-com (1).svg" width={24} height={24} aria-hidden />
@@ -82,6 +84,7 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
               href={PHONE_TEL}
               className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
               aria-label="Call us"
+              data-cursor-magnetic
             >
               <span className="inline-block shrink-0 opacity-40">
                 <Icon src="phone-svgrepo-com.svg" width={24} height={24} aria-hidden />
@@ -94,6 +97,7 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
               rel="noopener noreferrer"
               className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
               aria-label="Chat on WhatsApp"
+              data-cursor-magnetic
             >
               <span className="inline-block shrink-0 opacity-40">
                 <Icon src="whatsapp-svgrepo-com.svg" width={24} height={24} aria-hidden />
@@ -105,6 +109,7 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
               onClick={handleSearchNav}
               className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
               aria-label="Scroll to top and focus search"
+              data-cursor-magnetic
             >
               <span className="inline-block shrink-0 opacity-40">
                 <Icon src="search-svgrepo-com.svg" width={24} height={24} aria-hidden />
@@ -116,6 +121,7 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
               onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
               className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
               aria-label="Open menu"
+              data-cursor-magnetic
             >
               <span className="inline-block shrink-0 opacity-40">
                 <Icon src="hamburger-menu-svgrepo-com.svg" width={24} height={24} aria-hidden />

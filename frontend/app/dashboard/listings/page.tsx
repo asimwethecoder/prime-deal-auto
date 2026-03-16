@@ -1,15 +1,19 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCars, deleteCar } from '@/lib/api/cars';
+import { reindexSearch } from '@/lib/api/search';
 import type { CarWithImages } from '@/lib/api/types';
+import { ApiError } from '@/lib/api/types';
 import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { DynamicIcon } from '@/components/ui/DynamicIcon';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import { cn } from '@/lib/utils/cn';
 
 const LIMIT = 30;
@@ -93,6 +97,7 @@ function ListingTableRow({ car, onDelete }: { car: CarWithImages; onDelete?: (id
             onClick={() => onDelete?.(car.id)}
             className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#E1E1E1] bg-[#F9FBFC] text-[#050B20] hover:opacity-80 transition-opacity"
             aria-label="Delete listing"
+            data-cursor-action="delete"
           >
             <DynamicIcon name="trash-2" width={18} height={18} />
           </button>
@@ -100,6 +105,7 @@ function ListingTableRow({ car, onDelete }: { car: CarWithImages; onDelete?: (id
             href={`/dashboard/listings/${car.id}/edit`}
             className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#E1E1E1] bg-white text-[#050B20] hover:opacity-80 transition-opacity"
             aria-label="Edit listing"
+            data-cursor-action="edit"
           >
             <DynamicIcon name="pencil" width={18} height={18} />
           </Link>
@@ -156,6 +162,7 @@ function ListingCard({ car, onDelete }: { car: CarWithImages; onDelete?: (id: st
             onClick={() => onDelete?.(car.id)}
             className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#E1E1E1] bg-[#F9FBFC] text-[#050B20]"
             aria-label="Delete"
+            data-cursor-action="delete"
           >
             <DynamicIcon name="trash-2" width={18} height={18} />
           </button>
@@ -163,6 +170,7 @@ function ListingCard({ car, onDelete }: { car: CarWithImages; onDelete?: (id: st
             href={`/dashboard/listings/${car.id}/edit`}
             className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#E1E1E1] bg-white text-[#050B20]"
             aria-label="Edit"
+            data-cursor-action="edit"
           >
             <DynamicIcon name="pencil" width={18} height={18} />
           </Link>
@@ -181,9 +189,15 @@ export default function MyListingsPage() {
 
   const [searchInput, setSearchInput] = useState(q);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteFeedback, setDeleteFeedback] = useState<'removed' | 'already_removed' | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [reindexLoading, setReindexLoading] = useState(false);
+  const [reindexSuccess, setReindexSuccess] = useState<string | null>(null);
+  const [reindexError, setReindexError] = useState<string | null>(null);
 
   const router = useRouter();
   const queryClient = useQueryClient();
+  const role = useAuthStore((s) => s.role);
   const sortConfig = SORT_OPTIONS.find((o) => o.value === sortValue) ?? SORT_OPTIONS[0];
   const params = {
     limit: LIMIT,
@@ -191,7 +205,7 @@ export default function MyListingsPage() {
     sortBy: sortConfig.sortBy,
     sortOrder: sortConfig.sortOrder,
     ...(q.trim() && { model: q.trim() }),
-    ...(statusFilter !== 'all' && { status: statusFilter }),
+    status: statusFilter as 'all' | 'active' | 'pending' | 'sold',
   };
 
   const { data, isLoading, isError, error } = useQuery({
@@ -240,20 +254,54 @@ export default function MyListingsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCar(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard-listings'] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard-listings'], exact: false });
       setDeleteId(null);
+      setDeleteError(null);
+      setDeleteFeedback(data.deleted ? 'removed' : 'already_removed');
+    },
+    onError: (error) => {
+      setDeleteError(error instanceof Error ? error.message : 'Could not delete listing.');
     },
   });
 
+  useEffect(() => {
+    if (!deleteFeedback) return;
+    const t = setTimeout(() => setDeleteFeedback(null), 3000);
+    return () => clearTimeout(t);
+  }, [deleteFeedback]);
+
+  useEffect(() => {
+    if (!reindexSuccess && !reindexError) return;
+    const t = setTimeout(() => {
+      setReindexSuccess(null);
+      setReindexError(null);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [reindexSuccess, reindexError]);
+
+  const handleReindex = useCallback(async () => {
+    setReindexError(null);
+    setReindexSuccess(null);
+    setReindexLoading(true);
+    try {
+      const result = await reindexSearch();
+      setReindexSuccess(`Search reindexed. ${result.indexed} cars indexed.`);
+      queryClient.invalidateQueries({ queryKey: ['explore-vehicles'] });
+    } catch (err) {
+      setReindexError(err instanceof ApiError ? err.message : 'Reindex failed.');
+    } finally {
+      setReindexLoading(false);
+    }
+  }, [queryClient]);
+
   const handleDeleteClick = useCallback((id: string) => {
     setDeleteId(id);
+    setDeleteError(null);
   }, []);
 
   const handleDeleteConfirm = useCallback(() => {
-    if (deleteId) {
-      deleteMutation.mutate(deleteId);
-    }
+    if (deleteId) deleteMutation.mutate(deleteId);
   }, [deleteId, deleteMutation]);
 
   return (
@@ -265,6 +313,37 @@ export default function MyListingsPage() {
             Lorem ipsum dolor sit amet, consectetur.
           </p>
         </div>
+
+        {deleteFeedback && (
+          <div
+            role="status"
+            className={cn(
+              'mb-4 rounded-xl border px-4 py-3 text-[15px]',
+              deleteFeedback === 'removed'
+                ? 'border-green-200 bg-green-50 text-green-800'
+                : 'border-amber-200 bg-amber-50 text-amber-800'
+            )}
+          >
+            {deleteFeedback === 'removed' ? 'Listing removed.' : 'Listing was already removed.'}
+          </div>
+        )}
+
+        {reindexSuccess && (
+          <div
+            role="status"
+            className="mb-4 rounded-xl border border-green-200 bg-green-50 text-green-800 px-4 py-3 text-[15px]"
+          >
+            {reindexSuccess}
+          </div>
+        )}
+        {reindexError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-[15px]"
+          >
+            {reindexError}
+          </div>
+        )}
 
         <div className="rounded-2xl border border-[#E1E1E1] bg-white overflow-hidden">
           {/* Status Filter Tabs */}
@@ -290,6 +369,8 @@ export default function MyListingsPage() {
             <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 max-w-md">
               <Icon src="search-alt-2-svgrepo-com.svg" width={16} height={16} className="shrink-0 text-[#050B20]" aria-hidden />
               <input
+                id="dashboard-listings-search"
+                name="q"
                 type="search"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
@@ -312,6 +393,18 @@ export default function MyListingsPage() {
                   </option>
                 ))}
               </select>
+              {role === 'admin' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReindex}
+                  loading={reindexLoading}
+                  disabled={reindexLoading}
+                >
+                  Reindex search
+                </Button>
+              )}
             </div>
           </div>
 
@@ -394,10 +487,15 @@ export default function MyListingsPage() {
             <p className="text-[15px] text-[#818181] mb-6">
               Are you sure you want to delete this listing? This will remove it from public view.
             </p>
+            {deleteError && (
+              <p className="text-[15px] text-red-600 mb-4" role="alert">
+                {deleteError}
+              </p>
+            )}
             <div className="flex gap-3 justify-end">
               <button
                 type="button"
-                onClick={() => setDeleteId(null)}
+                onClick={() => { setDeleteId(null); setDeleteError(null); }}
                 disabled={deleteMutation.isPending}
                 className="px-4 py-2 text-[15px] font-medium text-[#050B20] border border-[#E1E1E1] rounded-xl hover:bg-[#F9FBFC] disabled:opacity-50"
               >

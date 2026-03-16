@@ -54,7 +54,7 @@ export function CarCard({ car, badge, originalPrice, priority }: CarCardProps) {
     : `${car.year} ${car.model}`;
 
   return (
-    <Link href={`/cars/${car.id}`} className="block min-h-[44px]" aria-label={`View details for ${car.year} ${car.make} ${car.model}`}>
+    <Link href={`/cars/${car.id}`} className="block min-h-[44px]" aria-label={`View details for ${car.year} ${car.make} ${car.model}`} data-cursor-magnetic data-vehicle-card>
       <motion.div
         className="group bg-white border border-[#E1E1E1] rounded-[16px] overflow-hidden hover:shadow-[0px_6px_24px_rgba(0,0,0,0.05)]"
         whileHover={cardHover}

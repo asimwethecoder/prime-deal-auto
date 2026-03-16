@@ -57,6 +57,8 @@ export function CarCardDark({ car, badge, originalPrice, priority }: CarCardDark
       href={`/cars/${car.id}`}
       className="block min-h-[44px] h-full"
       aria-label={`View details for ${car.year} ${car.make} ${car.model}`}
+      data-cursor-magnetic
+      data-vehicle-card
     >
       <motion.div
         className="group flex h-full min-h-[280px] flex-col overflow-hidden rounded-[16px] bg-white/[0.07] sm:min-h-[320px] sm:flex-row"

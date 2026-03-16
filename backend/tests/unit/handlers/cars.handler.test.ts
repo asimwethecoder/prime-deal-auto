@@ -14,12 +14,22 @@ import {
 } from '../../integration/test-fixtures';
 
 // Use vi.hoisted to create mock functions that can be referenced in vi.mock
-const { mockListCars, mockGetCarById, mockCreateCar, mockUpdateCar, mockDeleteCar } = vi.hoisted(() => ({
+const {
+  mockListCars,
+  mockGetCarById,
+  mockCreateCar,
+  mockUpdateCar,
+  mockDeleteCar,
+  mockIndexCar,
+  mockRemoveCarFromIndex,
+} = vi.hoisted(() => ({
   mockListCars: vi.fn(),
   mockGetCarById: vi.fn(),
   mockCreateCar: vi.fn(),
   mockUpdateCar: vi.fn(),
   mockDeleteCar: vi.fn(),
+  mockIndexCar: vi.fn(),
+  mockRemoveCarFromIndex: vi.fn(),
 }));
 
 // Mock the cars service module
@@ -30,6 +40,14 @@ vi.mock('../../../src/services/cars.service', () => ({
     createCar: mockCreateCar,
     updateCar: mockUpdateCar,
     deleteCar: mockDeleteCar,
+  })),
+}));
+
+// Mock the search service so we can assert indexCar / removeCarFromIndex are called
+vi.mock('../../../src/services/search.service', () => ({
+  SearchService: vi.fn().mockImplementation(() => ({
+    indexCar: mockIndexCar,
+    removeCarFromIndex: mockRemoveCarFromIndex,
   })),
 }));
 
@@ -71,7 +89,10 @@ describe('Cars Handler - Unit Tests', () => {
       model: 'Corolla',
       year: 2023,
       price: '389000',
+      status: 'active',
     });
+    mockIndexCar.mockResolvedValue(undefined);
+    mockRemoveCarFromIndex.mockResolvedValue(undefined);
     
     mockUpdateCar.mockImplementation(async (id: string, data: any) => {
       if (id === 'car-1') {
@@ -299,6 +320,21 @@ describe('Cars Handler - Unit Tests', () => {
   });
 
   describe('DELETE /cars/:id - Auth', () => {
+    it('returns 200 and deleted true when admin', async () => {
+      const event = createAdminEvent({
+        httpMethod: 'DELETE',
+        path: '/cars/car-1',
+        pathParameters: { carId: 'car-1' },
+      });
+
+      const result = await handleDeleteCar(event);
+
+      expect(result.statusCode).toBe(200);
+      const data = expectSuccess<{ deleted: boolean; id: string }>(result.body);
+      expect(data.deleted).toBe(true);
+      expect(data.id).toBe('car-1');
+    });
+
     it('returns 401 when not authenticated', async () => {
       const event = createMockEvent({
         httpMethod: 'DELETE',
@@ -323,6 +359,140 @@ describe('Cars Handler - Unit Tests', () => {
 
       expect(result.statusCode).toBe(403);
       expectError(result.body, 'FORBIDDEN');
+    });
+  });
+
+  describe('Search index sync', () => {
+    it('POST /cars calls indexCar when created car has status active', async () => {
+      mockCreateCar.mockResolvedValue({
+        id: 'car-new',
+        make: 'Toyota',
+        model: 'Corolla',
+        year: 2023,
+        price: 389000,
+        status: 'active',
+      });
+
+      const event = createAdminEvent({
+        httpMethod: 'POST',
+        path: '/cars',
+        body: JSON.stringify({
+          make: 'Toyota',
+          model: 'Corolla',
+          year: 2023,
+          price: 389000,
+          mileage: 0,
+          condition: 'good',
+          transmission: 'automatic',
+          fuel_type: 'petrol',
+        }),
+      });
+
+      const result = await handleCreateCar(event);
+
+      expect(result.statusCode).toBe(201);
+      expect(mockIndexCar).toHaveBeenCalledTimes(1);
+      expect(mockIndexCar).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'car-new', status: 'active' })
+      );
+    });
+
+    it('POST /cars does not call indexCar when created car has status pending', async () => {
+      mockCreateCar.mockResolvedValue({
+        id: 'car-new',
+        make: 'Toyota',
+        model: 'Corolla',
+        year: 2023,
+        price: 389000,
+        status: 'pending',
+      });
+
+      const event = createAdminEvent({
+        httpMethod: 'POST',
+        path: '/cars',
+        body: JSON.stringify({
+          make: 'Toyota',
+          model: 'Corolla',
+          year: 2023,
+          price: 389000,
+          mileage: 0,
+          condition: 'good',
+          transmission: 'automatic',
+          fuel_type: 'petrol',
+          status: 'pending',
+        }),
+      });
+
+      const result = await handleCreateCar(event);
+
+      expect(result.statusCode).toBe(201);
+      expect(mockIndexCar).not.toHaveBeenCalled();
+    });
+
+    it('PUT /cars/:id calls indexCar when updated to active', async () => {
+      mockUpdateCar.mockResolvedValue({
+        id: 'car-1',
+        make: 'Toyota',
+        model: 'Corolla',
+        year: 2023,
+        price: 400000,
+        status: 'active',
+      });
+
+      const event = createAdminEvent({
+        httpMethod: 'PUT',
+        path: '/cars/car-1',
+        pathParameters: { carId: 'car-1' },
+        body: JSON.stringify({ price: 400000, status: 'active' }),
+      });
+
+      const result = await handleUpdateCar(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(mockIndexCar).toHaveBeenCalledTimes(1);
+      expect(mockIndexCar).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'car-1', status: 'active' })
+      );
+      expect(mockRemoveCarFromIndex).not.toHaveBeenCalled();
+    });
+
+    it('PUT /cars/:id calls removeCarFromIndex when updated to non-active', async () => {
+      mockUpdateCar.mockResolvedValue({
+        id: 'car-1',
+        make: 'Toyota',
+        model: 'Corolla',
+        year: 2023,
+        price: 400000,
+        status: 'sold',
+      });
+
+      const event = createAdminEvent({
+        httpMethod: 'PUT',
+        path: '/cars/car-1',
+        pathParameters: { carId: 'car-1' },
+        body: JSON.stringify({ status: 'sold' }),
+      });
+
+      const result = await handleUpdateCar(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(mockRemoveCarFromIndex).toHaveBeenCalledTimes(1);
+      expect(mockRemoveCarFromIndex).toHaveBeenCalledWith('car-1');
+      expect(mockIndexCar).not.toHaveBeenCalled();
+    });
+
+    it('DELETE /cars/:id calls removeCarFromIndex', async () => {
+      const event = createAdminEvent({
+        httpMethod: 'DELETE',
+        path: '/cars/car-1',
+        pathParameters: { carId: 'car-1' },
+      });
+
+      const result = await handleDeleteCar(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(mockRemoveCarFromIndex).toHaveBeenCalledTimes(1);
+      expect(mockRemoveCarFromIndex).toHaveBeenCalledWith('car-1');
     });
   });
 });

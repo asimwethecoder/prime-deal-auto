@@ -127,6 +127,7 @@ export interface CarListParams {
   transmission?: Car['transmission'];
   fuelType?: Car['fuel_type'];
   bodyType?: string;
+  status?: 'all' | 'active' | 'pending' | 'sold';
   sortBy?: 'price' | 'year' | 'mileage' | 'createdAt' | 'created_at';
   sortOrder?: 'asc' | 'desc';
 }

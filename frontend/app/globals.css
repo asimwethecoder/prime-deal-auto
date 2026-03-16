@@ -20,6 +20,11 @@
   }
 }
 
+/* Custom cursor: hide default pointer when custom cursor is active (pointer: fine only) */
+html.custom-cursor-active body {
+  cursor: none;
+}
+
 /* ============================================
    Chat Widget Animations
    ============================================ */

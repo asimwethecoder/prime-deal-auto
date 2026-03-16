@@ -100,19 +100,32 @@ const createMockPool = () => ({
   query: vi.fn().mockImplementation(async (sql: string, params?: any[]) => {
     const sqlLower = sql.toLowerCase();
     
+    // Facet query: SELECT col as value, COUNT(*) as count FROM cars ... GROUP BY col (col may be quoted)
+    if (sqlLower.includes('as value') && sqlLower.includes('group by')) {
+      const groupByMatch = sql.match(/GROUP BY\s+"?(\w+)"?/i);
+      const column = groupByMatch ? groupByMatch[1] : 'make';
+      const activeCars = testDataStore.cars.filter((c: any) => c.status === 'active');
+      const counts: Record<string, number> = {};
+      activeCars.forEach((car: any) => {
+        const val = car[column];
+        if (val != null && val !== '') {
+          const key = String(val);
+          counts[key] = (counts[key] || 0) + 1;
+        }
+      });
+      const rows = Object.entries(counts).map(([value, count]) => ({ value, count: String(count) }));
+      rows.sort((a, b) => Number(b.count) - Number(a.count) || a.value.localeCompare(b.value));
+      return { rows: rows.slice(0, 50), rowCount: rows.length };
+    }
+
     // SELECT cars with filters
     if (sqlLower.includes('select') && sqlLower.includes('from cars')) {
-      let cars = testDataStore.cars.filter(c => c.status === 'active');
-      
-      // Apply basic filters from params if present
-      if (params && params.length > 0) {
-        // This is simplified - real implementation would parse SQL
-      }
+      let cars = testDataStore.cars.filter((c: any) => c.status === 'active');
       
       // Handle single car by ID
       if (sqlLower.includes('where') && sqlLower.includes('id')) {
         const carId = params?.[0];
-        const car = testDataStore.cars.find(c => c.id === carId);
+        const car = testDataStore.cars.find((c: any) => c.id === carId);
         return { rows: car ? [car] : [], rowCount: car ? 1 : 0 };
       }
       
@@ -125,28 +138,58 @@ const createMockPool = () => ({
       return { rows: [{ count: activeCars.length }], rowCount: 1 };
     }
     
-    // INSERT car
+    // INSERT car - params: make, model, variant, year, price, mileage, condition, body_type, transmission, fuel_type, color, description, features, status, video_url
     if (sqlLower.includes('insert into cars')) {
+      const p = params ?? [];
       const newCar = {
         id: `car-${testDataStore.carIdCounter++}-new`,
+        make: p[0],
+        model: p[1],
+        variant: p[2] ?? null,
+        year: p[3],
+        price: p[4],
+        mileage: p[5] ?? 0,
+        condition: p[6],
+        body_type: p[7] ?? null,
+        transmission: p[8],
+        fuel_type: p[9],
+        color: p[10] ?? null,
+        description: p[11] ?? null,
+        features: typeof p[12] === 'string' ? (() => { try { return JSON.parse(p[12]); } catch { return []; } })() : [],
+        status: p[13] ?? 'active',
+        video_url: p[14] ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         images: [],
-        status: 'active',
       };
       testDataStore.cars.push(newCar);
       return { rows: [newCar], rowCount: 1 };
     }
-    
-    // UPDATE car
-    if (sqlLower.includes('update cars')) {
-      const carId = params?.[params.length - 1]; // ID is usually last param
-      const car = testDataStore.cars.find(c => c.id === carId);
-      if (car) {
-        car.updated_at = new Date().toISOString();
-        return { rows: [car], rowCount: 1 };
+
+    // UPDATE car - SET col1 = $1, col2 = $2, ... WHERE id = $N; last param is id
+    if (sqlLower.includes('update cars') && !sqlLower.includes("status = 'deleted'")) {
+      const carId = params?.[params.length - 1];
+      const car = testDataStore.cars.find((c: any) => c.id === carId);
+      if (!car) return { rows: [], rowCount: 0 };
+      const setMatch = sql.match(/SET\s+(.+?)\s+WHERE/i);
+      if (setMatch) {
+        const setClause = setMatch[1];
+        setClause.split(',').forEach((part: string) => {
+          const trimmed = part.trim();
+          const colMatch = trimmed.match(/^(\w+)\s*=\s*\$\d+/);
+          if (colMatch) {
+            const col = colMatch[1];
+            const numMatch = trimmed.match(/\$(\d+)/);
+            const idx = numMatch ? parseInt(numMatch[1], 10) - 1 : -1;
+            if (params && idx >= 0 && idx < params.length - 1) {
+              (car as any)[col] = params[idx];
+            }
+          } else if (trimmed.toLowerCase().startsWith('updated_at')) {
+            (car as any).updated_at = new Date().toISOString();
+          }
+        });
       }
-      return { rows: [], rowCount: 0 };
+      return { rows: [car], rowCount: 1 };
     }
     
     // DELETE (soft delete)
@@ -233,6 +276,11 @@ vi.mock('../src/lib/opensearch', () => ({
     }),
     index: vi.fn().mockResolvedValue({}),
     bulk: vi.fn().mockResolvedValue({ body: { errors: false } }),
+    delete: vi.fn().mockResolvedValue({}),
+    indices: {
+      create: vi.fn().mockResolvedValue({ acknowledged: true }),
+      delete: vi.fn().mockResolvedValue({}),
+    },
   }),
   OpenSearchError: class OpenSearchError extends Error {},
 }));

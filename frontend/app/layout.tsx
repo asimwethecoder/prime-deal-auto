@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { DM_Sans, Bebas_Neue } from 'next/font/google';
 import { Providers } from './providers';
-import { ConditionalSiteLayout } from '@/components/layout/ConditionalSiteLayout';
+import { AppWithCursor } from './AppWithCursor';
 import './globals.css';
 
 // Load DM Sans font with next/font for optimization
@@ -60,7 +60,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${dmSans.variable} ${bebasNeue.variable} font-sans antialiased flex flex-col min-h-screen`}>
         <Providers>
-          <ConditionalSiteLayout>{children}</ConditionalSiteLayout>
+          <AppWithCursor>{children}</AppWithCursor>
         </Providers>
       </body>
     </html>

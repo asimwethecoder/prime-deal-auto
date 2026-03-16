@@ -193,7 +193,7 @@ export function Header() {
           <div className="flex items-center justify-between h-16">
             {/* Left: Logo + Search pill */}
             <div className="flex items-center gap-6 flex-1 min-w-0">
-              <Link href="/" className={logoClass} aria-label="Prime Deal Auto Home">
+              <Link href="/" className={logoClass} aria-label="Prime Deal Auto Home" data-cursor-brand>
                 <span
                   className={`inline-flex items-center justify-center rounded-lg overflow-hidden ${!isTransparent ? 'bg-white px-2 py-1.5' : ''}`}
                 >

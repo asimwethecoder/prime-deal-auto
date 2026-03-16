@@ -194,6 +194,51 @@ export class SearchService {
   }
 
   /**
+   * Remove a car from the search index (e.g. when soft-deleted).
+   * Best-effort: logs and returns without throwing if OpenSearch is unavailable,
+   * so the primary delete (DB) still succeeds.
+   *
+   * @param carId - The car UUID to remove from the index
+   */
+  async removeCarFromIndex(carId: string): Promise<void> {
+    try {
+      await this.searchRepository.deleteDocument(carId);
+    } catch (error) {
+      if (error instanceof OpenSearchError) {
+        console.warn('Could not remove car from search index (search may be unavailable)', {
+          carId,
+          error: error.message
+        });
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Index a single car in OpenSearch (upsert by id).
+   * Best-effort: logs and returns without throwing on OpenSearchError,
+   * so the primary write (DB) still succeeds.
+   *
+   * @param car - Car record from DB (same shape as reindex uses)
+   */
+  async indexCar(car: Record<string, unknown>): Promise<void> {
+    try {
+      const doc = this.transformToDocument(car);
+      await this.searchRepository.indexDocument(doc);
+    } catch (error) {
+      if (error instanceof OpenSearchError) {
+        console.warn('Could not index car (search may be unavailable)', {
+          carId: (car as { id?: string }).id,
+          error: error.message
+        });
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Reindex all active cars from database to OpenSearch
    * 
    * Flow:

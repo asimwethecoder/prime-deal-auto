@@ -234,6 +234,46 @@ export class SearchRepository {
   }
 
   /**
+   * Delete a single car document from the index by id.
+   * Used when a car is soft-deleted so the public search stays in sync.
+   * Ignores 404 if the document is not in the index.
+   *
+   * @param carId - The car UUID to remove from the index
+   * @throws OpenSearchError if delete fails (except 404)
+   */
+  async deleteDocument(carId: string): Promise<void> {
+    const client = getOpenSearchClient();
+    try {
+      await client.delete({ index: this.indexName, id: carId });
+    } catch (error: unknown) {
+      const statusCode = (error as { statusCode?: number }).statusCode;
+      if (statusCode === 404) {
+        return; // Document not in index (e.g. never indexed or already removed)
+      }
+      throw new OpenSearchError('Delete document failed', statusCode, error);
+    }
+  }
+
+  /**
+   * Index a single car document (upsert by id).
+   *
+   * @param doc - Car document to index
+   * @throws OpenSearchError if index fails
+   */
+  async indexDocument(doc: CarDocument): Promise<void> {
+    const client = getOpenSearchClient();
+    try {
+      await client.index({
+        index: this.indexName,
+        id: doc.id,
+        body: doc
+      });
+    } catch (error) {
+      throw new OpenSearchError('Index document failed', undefined, error);
+    }
+  }
+
+  /**
    * Bulk index documents in batches
    * 
    * @param documents - Array of car documents to index

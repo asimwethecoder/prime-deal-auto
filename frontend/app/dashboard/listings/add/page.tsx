@@ -247,7 +247,7 @@ export default function AddListingPage() {
           await saveImageMetadata(car.id, s3Key, filename);
         }
 
-        router.push(`/dashboard/listings/${car.id}/edit`);
+        router.push('/dashboard/listings');
       } catch (err) {
         const message =
           err instanceof ApiError

@@ -83,6 +83,16 @@ export async function searchCars(
 }
 
 /**
+ * Reindex all active cars into search (admin only).
+ * Call POST /admin/reindex with auth token.
+ *
+ * @returns Object with indexed count
+ */
+export async function reindexSearch(): Promise<{ indexed: number }> {
+  return post<{ indexed: number }>('/admin/reindex');
+}
+
+/**
  * Get search suggestions for autocomplete
  * 
  * @param query - Partial search query
