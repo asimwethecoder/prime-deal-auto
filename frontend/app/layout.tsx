@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { DM_Sans, Bebas_Neue } from 'next/font/google';
 import { Providers } from './providers';
 import { AppWithCursor } from './AppWithCursor';
+import { PwaRegister } from './PwaRegister';
+import { PwaInstallPrompt } from './PwaInstallPrompt';
 import './globals.css';
 
 // Load DM Sans font with next/font for optimization
@@ -45,6 +47,10 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  icons: {
+    icon: '/logo/primedealautologo.jpeg',
+    apple: '/logo/primedealautologo.jpeg',
+  },
   verification: {
     // Add Google Search Console verification when available
     // google: 'your-verification-code',
@@ -60,6 +66,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${dmSans.variable} ${bebasNeue.variable} font-sans antialiased flex flex-col min-h-screen`}>
         <Providers>
+          <PwaRegister />
+          <PwaInstallPrompt />
           <AppWithCursor>{children}</AppWithCursor>
         </Providers>
       </body>
