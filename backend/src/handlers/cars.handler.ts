@@ -139,10 +139,10 @@ export async function handleCreateCar(
       year,
       price,
       mileage: Number.isInteger(mileage) && mileage >= 0 ? mileage : 0,
-      condition,
+      condition: condition as CreateCarInput['condition'],
       body_type: typeof body.body_type === 'string' ? body.body_type.trim() || undefined : undefined,
-      transmission,
-      fuel_type,
+      transmission: transmission as CreateCarInput['transmission'],
+      fuel_type: fuel_type as CreateCarInput['fuel_type'],
       color: typeof body.color === 'string' ? body.color.trim() || undefined : undefined,
       description: typeof body.description === 'string' ? body.description.trim() || undefined : undefined,
       features: Array.isArray(body.features) ? body.features.filter((f): f is string => typeof f === 'string') : undefined,
@@ -153,7 +153,7 @@ export async function handleCreateCar(
     const car = await carService.createCar(input);
     if (car.status === 'active') {
       try {
-        await searchService.indexCar(car);
+        await searchService.indexCar(car as unknown as Record<string, unknown>);
       } catch (e) {
         console.warn('Search index update failed after create', {
           carId: car.id,
@@ -297,7 +297,7 @@ export async function handleUpdateCar(
 
     if (car.status === 'active') {
       try {
-        await searchService.indexCar(car);
+        await searchService.indexCar(car as unknown as Record<string, unknown>);
       } catch (e) {
         console.warn('Search index update failed after update', {
           carId: car.id,
