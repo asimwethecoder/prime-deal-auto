@@ -15,24 +15,9 @@
  */
 
 export const INDEX_SCHEMA = {
-  settings: {
-    number_of_shards: 2,
-    number_of_replicas: 1,
-    analysis: {
-      analyzer: {
-        standard_lowercase: {
-          type: 'standard',
-          stopwords: '_english_'
-        }
-      },
-      normalizer: {
-        lowercase: {
-          type: 'custom',
-          filter: ['lowercase']
-        }
-      }
-    }
-  },
+  // OpenSearch Serverless does not support index-level settings
+  // (number_of_shards, number_of_replicas, custom analyzers/normalizers)
+  // so we only provide mappings here.
   mappings: {
     properties: {
       id: {
@@ -40,31 +25,25 @@ export const INDEX_SCHEMA = {
       },
       make: {
         type: 'text',
-        analyzer: 'standard_lowercase',
         fields: {
           keyword: {
-            type: 'keyword',
-            normalizer: 'lowercase'
+            type: 'keyword'
           }
         }
       },
       model: {
         type: 'text',
-        analyzer: 'standard_lowercase',
         fields: {
           keyword: {
-            type: 'keyword',
-            normalizer: 'lowercase'
+            type: 'keyword'
           }
         }
       },
       variant: {
         type: 'text',
-        analyzer: 'standard_lowercase',
         fields: {
           keyword: {
-            type: 'keyword',
-            normalizer: 'lowercase'
+            type: 'keyword'
           }
         }
       },
@@ -98,16 +77,14 @@ export const INDEX_SCHEMA = {
         type: 'keyword'
       },
       description: {
-        type: 'text',
-        analyzer: 'standard_lowercase'
+        type: 'text'
       },
       features: {
-        type: 'text',
-        analyzer: 'standard_lowercase'
+        type: 'text'
       },
       primary_image_url: {
         type: 'keyword',
-        index: false // Not searchable, just stored for display
+        index: false
       },
       status: {
         type: 'keyword'

@@ -89,7 +89,26 @@ export class SearchService {
         params.filters,
         { limit, offset, sortBy, sortOrder }
       );
-      
+
+      // If OpenSearch returned results, use them
+      if (result.total > 0) {
+        return this.formatResponse(result, limit, offset);
+      }
+
+      // OpenSearch returned 0 results — check if PostgreSQL has data
+      // (handles empty/stale index gracefully)
+      const pgResult = await this.carRepository.fullTextSearch(
+        query,
+        params.filters,
+        { limit, offset, sortBy, sortOrder }
+      );
+
+      if (pgResult.total > 0) {
+        console.warn('OpenSearch returned 0 results but PostgreSQL has data — using PostgreSQL fallback');
+        return this.formatResponse(pgResult, limit, offset);
+      }
+
+      // Both returned 0 — genuinely no results
       return this.formatResponse(result, limit, offset);
     } catch (error) {
       if (error instanceof OpenSearchError) {
@@ -122,29 +141,44 @@ export class SearchService {
    */
   async getFacets(filters: SearchFilters): Promise<FacetResult> {
     this.validateFilters(filters);
-    
+
+    const pgFacetFilters = {
+      make: filters.make,
+      model: filters.model,
+      variant: filters.variant,
+      bodyType: filters.bodyType,
+      fuelType: filters.fuelType,
+      transmission: filters.transmission,
+      condition: filters.condition,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      minYear: filters.minYear,
+      maxYear: filters.maxYear
+    };
+
     try {
-      return await this.searchRepository.getFacets(filters);
+      const osResult = await this.searchRepository.getFacets(filters);
+
+      // Check if OpenSearch returned any facet values
+      const hasData = Object.values(osResult).some(arr => arr.length > 0);
+      if (hasData) return osResult;
+
+      // OpenSearch facets empty — try PostgreSQL fallback
+      const pgResult = await this.carRepository.getFacets(pgFacetFilters);
+      const pgHasData = Object.values(pgResult).some(arr => arr.length > 0);
+      if (pgHasData) {
+        console.warn('OpenSearch facets empty but PostgreSQL has data — using PostgreSQL fallback');
+        return pgResult;
+      }
+
+      return osResult;
     } catch (error) {
       if (error instanceof OpenSearchError) {
         console.warn('OpenSearch unavailable for facets, falling back to PostgreSQL', {
           error: error.message,
           filters
         });
-        // Fallback to PostgreSQL
-        return await this.carRepository.getFacets({
-          make: filters.make,
-          model: filters.model,
-          variant: filters.variant,
-          bodyType: filters.bodyType,
-          fuelType: filters.fuelType,
-          transmission: filters.transmission,
-          condition: filters.condition,
-          minPrice: filters.minPrice,
-          maxPrice: filters.maxPrice,
-          minYear: filters.minYear,
-          maxYear: filters.maxYear
-        });
+        return await this.carRepository.getFacets(pgFacetFilters);
       }
       throw error;
     }
@@ -174,20 +208,60 @@ export class SearchService {
     }
     
     try {
-      return await this.searchRepository.getSuggestions(
+      const results = await this.searchRepository.getSuggestions(
         field as 'make' | 'model' | 'variant',
         prefix,
         filters
       );
+
+      if (results.length > 0) return results;
+
+      // OpenSearch returned empty — fall back to PostgreSQL facets for this field
+      const pgFacets = await this.carRepository.getFacets({
+        make: filters?.make,
+        model: filters?.model,
+      });
+
+      // Map field name to facet key (body_type uses underscore in DB)
+      const facetKey = field === 'variant' ? 'variant' : field;
+      const facetValues = (pgFacets[facetKey] ?? []).map(f => f.value);
+
+      if (facetValues.length > 0) {
+        console.warn(`OpenSearch suggestions empty for ${field}, using PostgreSQL fallback`);
+        // Apply prefix filter if provided
+        if (prefix) {
+          const lower = prefix.toLowerCase();
+          return facetValues.filter(v => v.toLowerCase().startsWith(lower)).slice(0, 10);
+        }
+        return facetValues.slice(0, 10);
+      }
+
+      return results;
     } catch (error) {
       if (error instanceof OpenSearchError) {
-        console.warn('OpenSearch unavailable for suggestions, returning empty array', {
+        console.warn('OpenSearch unavailable for suggestions, falling back to PostgreSQL', {
           error: error.message,
           field,
           prefix,
           filters
         });
-        return [];
+
+        // Fall back to PostgreSQL facets
+        try {
+          const pgFacets = await this.carRepository.getFacets({
+            make: filters?.make,
+            model: filters?.model,
+          });
+          const facetKey = field === 'variant' ? 'variant' : field;
+          const facetValues = (pgFacets[facetKey] ?? []).map(f => f.value);
+          if (prefix) {
+            const lower = prefix.toLowerCase();
+            return facetValues.filter(v => v.toLowerCase().startsWith(lower)).slice(0, 10);
+          }
+          return facetValues.slice(0, 10);
+        } catch {
+          return [];
+        }
       }
       throw error;
     }

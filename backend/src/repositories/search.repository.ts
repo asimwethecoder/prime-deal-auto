@@ -209,7 +209,15 @@ export class SearchRepository {
         index: this.indexName,
         body: INDEX_SCHEMA as any
       });
+      // OpenSearch Serverless needs time for the index to become available
+      await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
+      // Ignore if index already exists (resource_already_exists_exception)
+      const errBody = (error as any)?.meta?.body;
+      if (errBody?.error?.type === 'resource_already_exists_exception') {
+        console.log('Index already exists, skipping creation');
+        return;
+      }
       throw new OpenSearchError('Index creation failed', undefined, error);
     }
   }
@@ -225,11 +233,14 @@ export class SearchRepository {
 
     try {
       await client.indices.delete({ index: this.indexName });
+      // Wait for deletion to propagate in Serverless
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      // Ignore 404 if index doesn't exist
-      if ((error as any).statusCode !== 404) {
-        throw new OpenSearchError('Index deletion failed', undefined, error);
+      const statusCode = (error as any)?.statusCode ?? (error as any)?.meta?.statusCode;
+      if (statusCode === 404) {
+        return; // Index doesn't exist, nothing to delete
       }
+      throw new OpenSearchError('Index deletion failed', undefined, error);
     }
   }
 
