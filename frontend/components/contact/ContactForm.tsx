@@ -76,6 +76,8 @@ export function ContactForm() {
         whatsAppNumber: data.whatsAppNumber?.trim() || undefined,
         subject: data.subject.trim(),
         enquiry: data.message.trim(),
+        enquiryType: 'general',
+        source: 'contact_page',
       });
       setSuccess(true);
     } catch (err) {

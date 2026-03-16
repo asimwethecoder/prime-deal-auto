@@ -28,6 +28,8 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
 
   const isHome = pathname === '/';
   const isCars = pathname?.startsWith('/cars') ?? false;
+  // Check if we're on a VDP (Vehicle Detail Page) - /cars/[carId]
+  const isVDP = pathname?.match(/^\/cars\/[^/]+$/) !== null;
 
   function handleSearchNav() {
     if (pathname === '/') {
@@ -46,81 +48,83 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
       </main>
       <Footer />
 
-      {/* Public-facing bottom nav: luxury glassmorphism (mobile only) */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-white/70 backdrop-blur-xl shadow-[0_-5px_25px_rgba(0,0,0,0.03)] border-t border-white/20 pb-[env(safe-area-inset-bottom,20px)]"
-        role="navigation"
-        aria-label="Mobile bottom navigation"
-      >
-        <div className="flex justify-around items-center h-[75px]">
-          <Link
-            href="/"
-            className={`flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 ${isHome ? 'text-[#405FF2]' : 'text-[#050B20]/40'}`}
-            aria-current={isHome ? 'page' : undefined}
-          >
-            <span className="inline-block shrink-0" style={isHome ? { filter: ACTIVE_ICON_FILTER } : { opacity: 0.4 }}>
-              <Icon src="home-1-svgrepo-com.svg" width={24} height={24} aria-hidden />
-            </span>
-            <span className="text-[12px] font-medium">Home</span>
-            {isHome && <span className="w-1 h-1 rounded-full bg-[#405FF2]" aria-hidden />}
-          </Link>
-          <Link
-            href="/cars"
-            className={`flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 ${isCars ? 'text-[#405FF2]' : 'text-[#050B20]/40'}`}
-            aria-current={isCars ? 'page' : undefined}
-          >
-            <span className="inline-block shrink-0" style={isCars ? { filter: ACTIVE_ICON_FILTER } : { opacity: 0.4 }}>
-              <Icon src="car-svgrepo-com (1).svg" width={24} height={24} aria-hidden />
-            </span>
-            <span className="text-[12px] font-medium">Cars</span>
-            {isCars && <span className="w-1 h-1 rounded-full bg-[#405FF2]" aria-hidden />}
-          </Link>
-          <a
-            href={PHONE_TEL}
-            className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
-            aria-label="Call us"
-          >
-            <span className="inline-block shrink-0 opacity-40">
-              <Icon src="phone-svgrepo-com.svg" width={24} height={24} aria-hidden />
-            </span>
-            <span className="text-[12px] font-medium">Phone</span>
-          </a>
-          <a
-            href={WHATSAPP_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
-            aria-label="Chat on WhatsApp"
-          >
-            <span className="inline-block shrink-0 opacity-40">
-              <Icon src="whatsapp-svgrepo-com.svg" width={24} height={24} aria-hidden />
-            </span>
-            <span className="text-[12px] font-medium">WhatsApp</span>
-          </a>
-          <button
-            type="button"
-            onClick={handleSearchNav}
-            className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
-            aria-label="Scroll to top and focus search"
-          >
-            <span className="inline-block shrink-0 opacity-40">
-              <Icon src="search-svgrepo-com.svg" width={24} height={24} aria-hidden />
-            </span>
-            <span className="text-[12px] font-medium">Search</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
-            className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
-            aria-label="Open menu"
-          >
-            <span className="inline-block shrink-0 opacity-40">
-              <Icon src="hamburger-menu-svgrepo-com.svg" width={24} height={24} aria-hidden />
-            </span>
-            <span className="text-[12px] font-medium">Menu</span>
-          </button>
-        </div>
-      </nav>
+      {/* Public-facing bottom nav: luxury glassmorphism (mobile only) - hidden on VDP pages */}
+      {!isVDP && (
+        <nav
+          className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-white/70 backdrop-blur-xl shadow-[0_-5px_25px_rgba(0,0,0,0.03)] border-t border-white/20 pb-[env(safe-area-inset-bottom,20px)]"
+          role="navigation"
+          aria-label="Mobile bottom navigation"
+        >
+          <div className="flex justify-around items-center h-[75px]">
+            <Link
+              href="/"
+              className={`flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 ${isHome ? 'text-[#405FF2]' : 'text-[#050B20]/40'}`}
+              aria-current={isHome ? 'page' : undefined}
+            >
+              <span className="inline-block shrink-0" style={isHome ? { filter: ACTIVE_ICON_FILTER } : { opacity: 0.4 }}>
+                <Icon src="home-1-svgrepo-com.svg" width={24} height={24} aria-hidden />
+              </span>
+              <span className="text-[12px] font-medium">Home</span>
+              {isHome && <span className="w-1 h-1 rounded-full bg-[#405FF2]" aria-hidden />}
+            </Link>
+            <Link
+              href="/cars"
+              className={`flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 ${isCars ? 'text-[#405FF2]' : 'text-[#050B20]/40'}`}
+              aria-current={isCars ? 'page' : undefined}
+            >
+              <span className="inline-block shrink-0" style={isCars ? { filter: ACTIVE_ICON_FILTER } : { opacity: 0.4 }}>
+                <Icon src="car-svgrepo-com (1).svg" width={24} height={24} aria-hidden />
+              </span>
+              <span className="text-[12px] font-medium">Cars</span>
+              {isCars && <span className="w-1 h-1 rounded-full bg-[#405FF2]" aria-hidden />}
+            </Link>
+            <a
+              href={PHONE_TEL}
+              className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
+              aria-label="Call us"
+            >
+              <span className="inline-block shrink-0 opacity-40">
+                <Icon src="phone-svgrepo-com.svg" width={24} height={24} aria-hidden />
+              </span>
+              <span className="text-[12px] font-medium">Phone</span>
+            </a>
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
+              aria-label="Chat on WhatsApp"
+            >
+              <span className="inline-block shrink-0 opacity-40">
+                <Icon src="whatsapp-svgrepo-com.svg" width={24} height={24} aria-hidden />
+              </span>
+              <span className="text-[12px] font-medium">WhatsApp</span>
+            </a>
+            <button
+              type="button"
+              onClick={handleSearchNav}
+              className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
+              aria-label="Scroll to top and focus search"
+            >
+              <span className="inline-block shrink-0 opacity-40">
+                <Icon src="search-svgrepo-com.svg" width={24} height={24} aria-hidden />
+              </span>
+              <span className="text-[12px] font-medium">Search</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
+              className="flex flex-col items-center gap-0.5 min-h-[44px] justify-center px-3 py-1 text-[#050B20]/40"
+              aria-label="Open menu"
+            >
+              <span className="inline-block shrink-0 opacity-40">
+                <Icon src="hamburger-menu-svgrepo-com.svg" width={24} height={24} aria-hidden />
+              </span>
+              <span className="text-[12px] font-medium">Menu</span>
+            </button>
+          </div>
+        </nav>
+      )}
 
       <WhatsAppFloatingButton />
       <ChatWidget />

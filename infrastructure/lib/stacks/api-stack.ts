@@ -22,6 +22,7 @@ export interface ApiStackProps extends cdk.StackProps {
   proxySecurityGroupId: string; // Pass ID as string to avoid cross-stack reference
   rdsProxy: rds.IDatabaseProxy;
   dbSecret: secretsmanager.ISecret;
+  smtpSecret: secretsmanager.ISecret;
 
   // From StorageStack
   bucket: s3.IBucket;
@@ -94,6 +95,7 @@ export class ApiStack extends cdk.Stack {
         DB_HOST: props.rdsProxy.endpoint,
         DB_NAME: 'primedealauto',
         SECRET_ARN: props.dbSecret.secretArn,
+        SMTP_SECRET_ARN: props.smtpSecret.secretArn,
         S3_BUCKET: props.bucket.bucketName,
         // CloudFront domain for serving images (uses CloudFront if available, otherwise S3 direct)
         ...(props.distribution && { CLOUDFRONT_DOMAIN: props.distribution.distributionDomainName }),
@@ -115,6 +117,7 @@ export class ApiStack extends cdk.Stack {
 
     // Grant Lambda permissions
     props.dbSecret.grantRead(this.lambdaFunction);
+    props.smtpSecret.grantRead(this.lambdaFunction);
     props.bucket.grantReadWrite(this.lambdaFunction);
 
     // Grant Bedrock permissions for AI Chat Assistant

@@ -174,10 +174,14 @@ CREATE TABLE leads (
   last_name VARCHAR(100),
   email VARCHAR(255) NOT NULL,
   phone VARCHAR(50),
+  whatsapp_number VARCHAR(50),
   country VARCHAR(100),
+  subject VARCHAR(255),
   enquiry TEXT,
   car_id UUID REFERENCES cars(id) ON DELETE SET NULL,
   source VARCHAR(100) NOT NULL DEFAULT 'website',
+  enquiry_type VARCHAR(20) NOT NULL DEFAULT 'general'
+    CHECK (enquiry_type IN ('general', 'test_drive', 'car_enquiry')),
   status VARCHAR(20) NOT NULL DEFAULT 'new'
     CHECK (status IN ('new', 'contacted', 'qualified', 'converted', 'closed')),
   assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -189,10 +193,39 @@ CREATE INDEX idx_leads_status ON leads(status);
 CREATE INDEX idx_leads_email ON leads(email);
 CREATE INDEX idx_leads_car_id ON leads(car_id);
 CREATE INDEX idx_leads_created_at ON leads(created_at DESC);
+CREATE INDEX idx_leads_enquiry_type ON leads(enquiry_type);
 
 CREATE TRIGGER trg_leads_updated_at
   BEFORE UPDATE ON leads
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================
+-- Lead Notes
+-- ============================================
+CREATE TABLE lead_notes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  note_text TEXT NOT NULL,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_lead_notes_lead_id ON lead_notes(lead_id);
+
+-- ============================================
+-- Lead Status History
+-- ============================================
+CREATE TABLE lead_status_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  old_status VARCHAR(20),
+  new_status VARCHAR(20) NOT NULL,
+  changed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_lead_status_history_lead_id ON lead_status_history(lead_id);
+CREATE INDEX idx_lead_status_history_changed_at ON lead_status_history(changed_at DESC);
 
 -- ============================================
 -- Chat Sessions

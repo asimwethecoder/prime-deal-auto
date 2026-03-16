@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   Calendar,
@@ -11,9 +10,6 @@ import {
   Fuel,
   Share2,
   Bookmark,
-  Play,
-  Camera,
-  Orbit,
   MapPin,
   Phone,
   MessageCircle,
@@ -26,6 +22,12 @@ import {
 import type { CarWithImages } from '@/lib/api/types';
 import { formatMileage, formatPrice } from '@/lib/utils/format';
 import { CarCard } from '@/components/cars/CarCard';
+import { InteractiveGallery } from '@/components/cars/InteractiveGallery';
+import { DynamicIcon } from '@/components/ui/DynamicIcon';
+import { getSpecIcon, ICON_STYLES } from '@/lib/constants/icon-mapping';
+import { ContactFormModal } from '@/components/contact/ContactFormModal';
+import { MobileVDPNavigation } from '@/components/layout/MobileVDPNavigation';
+import { generateWhatsAppLink } from '@/lib/whatsapp';
 
 interface CarDetailLayoutProps {
   car: CarWithImages;
@@ -36,9 +38,39 @@ export function CarDetailLayout({ car, relatedCars }: CarDetailLayoutProps) {
   const title = `${car.make} ${car.model}`;
   const subtitle = car.variant ? `${car.variant}` : `${car.year} ${car.model}`;
 
+  // Contact modal state
+  const [isContactModalOpen, setIsContactModalOpen] = React.useState(false);
+  const [contactFormType, setContactFormType] = React.useState<'enquiry' | 'test_drive'>('enquiry');
+
+  const openEnquiryModal = () => {
+    setContactFormType('enquiry');
+    setIsContactModalOpen(true);
+  };
+
+  const openTestDriveModal = () => {
+    setContactFormType('test_drive');
+    setIsContactModalOpen(true);
+  };
+
+  // Car info for contact forms
+  const carInfo = {
+    id: car.id,
+    make: car.make,
+    model: car.model,
+    variant: car.variant,
+    year: car.year,
+    price: car.price,
+  };
+
+  // Prepare gallery images with primary first
   const primaryImage = car.images.find((img) => img.is_primary) || car.images[0];
   const otherImages = car.images.filter((img) => img !== primaryImage);
-  const galleryImages = [primaryImage, ...otherImages].filter(Boolean);
+  const galleryImages = [primaryImage, ...otherImages].filter(Boolean).map((img) => ({
+    id: img!.id,
+    url: img!.cloudfront_url,
+    cloudfront_url: img!.cloudfront_url,
+    alt: `${car.year} ${car.make} ${car.model}`,
+  }));
 
   return (
     <motion.div
@@ -94,48 +126,13 @@ export function CarDetailLayout({ car, relatedCars }: CarDetailLayoutProps) {
       <div className="grid grid-cols-1 gap-12 xl:grid-cols-[minmax(0,1fr)_400px] items-start">
         {/* Left column */}
         <div className="space-y-12">
-          {/* Gallery */}
-          <section aria-label="Car media gallery" className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-              {/* Large image */}
-              <div className="relative h-[320px] sm:h-[420px] lg:h-[550px] rounded-tl-[16px] rounded-bl-[16px] rounded-tr-[16px] lg:rounded-tr-none overflow-hidden bg-primary">
-                {primaryImage && (
-                  <Image
-                    src={primaryImage.cloudfront_url}
-                    alt={`${car.year} ${car.make} ${car.model}`}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 50vw"
-                    priority
-                  />
-                )}
-              </div>
-
-              {/* 2x2 grid of secondary images */}
-              <div className="hidden h-[550px] grid-cols-2 grid-rows-2 gap-4 lg:grid">
-                {galleryImages.slice(1, 5).map((image) => (
-                  <div
-                    key={image!.id}
-                    className="relative overflow-hidden bg-primary first:rounded-tr-[16px] last:rounded-br-[16px]"
-                  >
-                    <Image
-                      src={image!.cloudfront_url}
-                      alt={`${car.year} ${car.make} ${car.model} additional`}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 1200px) 33vw, 25vw"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Media actions */}
-            <div className="flex flex-wrap gap-3">
-              <MediaButton icon={Play} label="Video" />
-              <MediaButton icon={Orbit} label="360 View" />
-              <MediaButton icon={Camera} label="All Photos" />
-            </div>
+          {/* Interactive Gallery */}
+          <section aria-label="Car media gallery">
+            <InteractiveGallery
+              images={galleryImages}
+              carName={`${car.year} ${car.make} ${car.model}`}
+              videoUrl={car.video_url}
+            />
           </section>
 
           {/* Car overview */}
@@ -148,64 +145,50 @@ export function CarDetailLayout({ car, relatedCars }: CarDetailLayoutProps) {
             </h2>
 
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              <OverviewColumn
+              <OverviewColumnWithCustomIcons
                 items={[
-                  { icon: Gauge, label: 'Mileage', value: formatMileage(car.mileage) },
+                  { label: 'Mileage', value: formatMileage(car.mileage) },
                   {
-                    icon: Fuel,
                     label: 'Fuel Type',
                     value: car.fuel_type.charAt(0).toUpperCase() + car.fuel_type.slice(1),
                   },
-                  { icon: Calendar, label: 'Year', value: car.year.toString() },
+                  { label: 'Year', value: car.year.toString() },
                   {
-                    icon: Cog,
                     label: 'Transmission',
                     value:
                       car.transmission.charAt(0).toUpperCase() + car.transmission.slice(1),
                   },
                   {
-                    icon: Gauge,
                     label: 'Body Type',
                     value: car.body_type.charAt(0).toUpperCase() + car.body_type.slice(1),
                   },
                   {
-                    icon: Gauge,
                     label: 'Drive Type',
                     value: '—',
                   },
                 ]}
               />
-              <OverviewColumn
+              <OverviewColumnWithCustomIcons
                 items={[
                   {
-                    icon: Gauge,
                     label: 'Condition',
                     value: car.condition.charAt(0).toUpperCase() + car.condition.slice(1),
                   },
                   {
-                    icon: Gauge,
                     label: 'Engine Size',
                     value: '—',
                   },
                   {
-                    icon: Gauge,
                     label: 'Doors',
                     value: '—',
                   },
                   {
-                    icon: Gauge,
                     label: 'Cylinders',
                     value: '—',
                   },
                   {
-                    icon: Gauge,
                     label: 'Color',
                     value: car.color.charAt(0).toUpperCase() + car.color.slice(1),
-                  },
-                  {
-                    icon: Gauge,
-                    label: 'VIN',
-                    value: car.id ?? '—',
                   },
                 ]}
               />
@@ -226,19 +209,10 @@ export function CarDetailLayout({ car, relatedCars }: CarDetailLayoutProps) {
 
             <div className="flex flex-wrap gap-3">
               <ActionButton
-                bgClass="bg-[#EEF1FB]"
-                icon={FileIcon}
-                label="View Vin Report"
-              />
-              <ActionButton
-                bgClass="bg-[#E9F2FF]"
-                icon={FileIcon}
-                label="Car Brochure"
-              />
-              <ActionButton
                 bgClass="bg-[#FFE9F3]"
                 icon={Calendar}
                 label="Schedule Test Drive"
+                onClick={openTestDriveModal}
               />
             </div>
           </section>
@@ -302,9 +276,29 @@ export function CarDetailLayout({ car, relatedCars }: CarDetailLayoutProps) {
 
         {/* Right column: sticky seller sidebar */}
         <aside className="xl:col-[2]">
-          <SellerSidebar />
+          <SellerSidebar 
+            onMessageClick={openEnquiryModal}
+            whatsappLink={generateWhatsAppLink(carInfo)}
+          />
         </aside>
       </div>
+
+      {/* Contact Form Modal */}
+      <ContactFormModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        car={carInfo}
+        formType={contactFormType}
+      />
+
+      {/* Mobile VDP Navigation - only visible on mobile */}
+      <MobileVDPNavigation
+        car={carInfo}
+        onEmailClick={openEnquiryModal}
+      />
+
+      {/* Spacer for mobile navigation */}
+      <div className="h-20 sm:hidden" aria-hidden="true" />
     </motion.div>
   );
 }
@@ -340,47 +334,42 @@ function GhostIconButton({ icon: IconComponent, label }: GhostIconButtonProps) {
   );
 }
 
-interface MediaButtonProps {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  label: string;
-}
-
-function MediaButton({ icon: IconComponent, label }: MediaButtonProps) {
-  return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-2 rounded-[12px] bg-white px-5 py-[11px] text-[15px] leading-[26px] text-primary shadow-sm hover:bg-gray-50 transition-colors"
-    >
-      <IconComponent className="h-4 w-4" aria-hidden />
-      <span>{label}</span>
-    </button>
-  );
-}
-
-interface OverviewItem {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+interface OverviewItemWithCustomIcon {
   label: string;
   value: string;
 }
 
-interface OverviewColumnProps {
-  items: OverviewItem[];
+interface OverviewColumnWithCustomIconsProps {
+  items: OverviewItemWithCustomIcon[];
 }
 
-function OverviewColumn({ items }: OverviewColumnProps) {
+function OverviewColumnWithCustomIcons({ items }: OverviewColumnWithCustomIconsProps) {
   return (
     <div className="space-y-4">
-      {items.map((item) => (
-        <div key={item.label} className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EEF1FB]">
-            <item.icon className="h-4 w-4 text-primary" aria-hidden />
+      {items.map((item) => {
+        const iconMapping = getSpecIcon(item.label);
+        
+        return (
+          <div key={item.label} className="flex items-center gap-3 group">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EEF1FB] transition-colors group-hover:bg-[#E9F2FF]">
+              {iconMapping ? (
+                <DynamicIcon
+                  name={iconMapping.filename.replace('.svg', '')}
+                  width={ICON_STYLES.size}
+                  height={ICON_STYLES.size}
+                  className="text-primary group-hover:text-secondary transition-colors"
+                />
+              ) : (
+                <Gauge className="h-4 w-4 text-primary" aria-hidden />
+              )}
+            </div>
+            <div>
+              <p className="text-[15px] leading-[26px] text-primary">{item.label}</p>
+              <p className="text-[15px] leading-[26px] font-medium text-primary">{item.value}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[15px] leading-[26px] text-primary">{item.label}</p>
-            <p className="text-[15px] leading-[26px] font-medium text-primary">{item.value}</p>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -389,13 +378,15 @@ interface ActionButtonProps {
   bgClass: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
+  onClick?: () => void;
 }
 
-function ActionButton({ bgClass, icon: IconComponent, label }: ActionButtonProps) {
+function ActionButton({ bgClass, icon: IconComponent, label, onClick }: ActionButtonProps) {
   return (
     <button
       type="button"
-      className={`inline-flex items-center gap-2 rounded-[12px] px-6 py-4 ${bgClass} text-[15px] leading-[26px] font-medium text-primary`}
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 rounded-[12px] px-6 py-4 ${bgClass} text-[15px] leading-[26px] font-medium text-primary hover:opacity-90 transition-opacity`}
     >
       <IconComponent className="h-5 w-5" aria-hidden />
       <span>{label}</span>
@@ -463,7 +454,6 @@ function SpecificationsAccordion({ car }: SpecificationsAccordionProps) {
           label: 'Condition',
           value: car.condition.charAt(0).toUpperCase() + car.condition.slice(1),
         },
-        { label: 'VIN', value: car.id ?? '—' },
       ],
     },
   ];
@@ -508,7 +498,12 @@ function SpecificationsAccordion({ car }: SpecificationsAccordionProps) {
   );
 }
 
-function SellerSidebar() {
+interface SellerSidebarProps {
+  onMessageClick: () => void;
+  whatsappLink: string;
+}
+
+function SellerSidebar({ onMessageClick, whatsappLink }: SellerSidebarProps) {
   return (
     <div className="sticky top-[100px]">
       <div className="rounded-[16px] border border-[#E1E1E1] bg-white p-6 shadow-[0px_6px_24px_rgba(0,0,0,0.05)] space-y-6">
@@ -557,13 +552,14 @@ function SellerSidebar() {
         <div className="space-y-3">
           <button
             type="button"
+            onClick={onMessageClick}
             className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-secondary px-6 py-4 text-[15px] leading-[26px] font-medium text-white hover:bg-secondary/90 transition-colors"
           >
             <MailIcon className="h-4 w-4" aria-hidden />
             <span>Message Dealer</span>
           </button>
           <a
-            href="https://wa.me/27732144072"
+            href={whatsappLink}
             target="_blank"
             rel="noopener noreferrer"
             className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[#60C961] bg-white px-6 py-4 text-[15px] leading-[26px] font-medium text-[#60C961] hover:bg-[#F3FFF6] transition-colors"

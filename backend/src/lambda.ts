@@ -18,6 +18,16 @@ import {
 } from './handlers/images.handler';
 import { handleCreateLead } from './handlers/leads.handler';
 import {
+  handleGetLeads,
+  handleGetLeadStats,
+  handleGetLeadById,
+  handleUpdateLead,
+  handleDeleteLead,
+  handleGetLeadNotes,
+  handleAddLeadNote,
+  handleGetLeadHistory,
+} from './handlers/admin-leads.handler';
+import {
   handleGetMakes,
   handleCreateMake,
   handleGetModels,
@@ -65,6 +75,16 @@ const routes: Route[] = [
   // Leads (contact form)
   { method: 'POST', pattern: /^\/leads$/, handler: handleCreateLead },
 
+  // Admin leads routes
+  { method: 'GET', pattern: /^\/admin\/leads$/, handler: handleGetLeads },
+  { method: 'GET', pattern: /^\/admin\/leads\/stats$/, handler: handleGetLeadStats },
+  { method: 'GET', pattern: /^\/admin\/leads\/([^/]+)$/, handler: handleGetLeadById },
+  { method: 'PATCH', pattern: /^\/admin\/leads\/([^/]+)$/, handler: handleUpdateLead },
+  { method: 'DELETE', pattern: /^\/admin\/leads\/([^/]+)$/, handler: handleDeleteLead },
+  { method: 'GET', pattern: /^\/admin\/leads\/([^/]+)\/notes$/, handler: handleGetLeadNotes },
+  { method: 'POST', pattern: /^\/admin\/leads\/([^/]+)\/notes$/, handler: handleAddLeadNote },
+  { method: 'GET', pattern: /^\/admin\/leads\/([^/]+)\/history$/, handler: handleGetLeadHistory },
+
   // Search routes
   { method: 'GET', pattern: /^\/search$/, handler: handleSearch },
   { method: 'GET', pattern: /^\/search\/facets$/, handler: handleFacets },
@@ -100,6 +120,10 @@ function matchRoute(
       } else if (path.startsWith('/models/')) {
         if (match[1]) {
           params.modelId = match[1];
+        }
+      } else if (path.startsWith('/admin/leads/')) {
+        if (match[1]) {
+          params.id = match[1];
         }
       }
       

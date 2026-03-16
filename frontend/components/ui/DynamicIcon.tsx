@@ -16,6 +16,14 @@ interface DynamicIconProps {
 
 const DEFAULT_SIZE = 24;
 
+// Module-level cache for SVG existence checks to prevent duplicate HEAD requests
+const svgExistsCache = new Map<string, boolean>();
+
+// Export function to clear cache (for testing purposes)
+export function clearSvgExistsCache(): void {
+  svgExistsCache.clear();
+}
+
 export function DynamicIcon({
   name,
   alt = '',
@@ -24,17 +32,46 @@ export function DynamicIcon({
   className,
   'aria-hidden': ariaHidden,
 }: DynamicIconProps) {
-  const [svgExists, setSvgExists] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // 1. Check Lucide icons FIRST (synchronous) - render immediately if found
+  const LucideIconComponent = getLucideIcon(name);
+  
+  if (LucideIconComponent) {
+    // Render Lucide icon immediately - no network request, no loading state
+    return (
+      <LucideIconComponent
+        size={width}
+        className={className}
+        aria-hidden={ariaHidden}
+      />
+    );
+  }
+
+  // 2. For non-Lucide icons, check cache or make HEAD request
+  // Initialize state from cache if available
+  const [svgExists, setSvgExists] = useState<boolean | null>(
+    svgExistsCache.has(name) ? svgExistsCache.get(name)! : null
+  );
+  const [isLoading, setIsLoading] = useState(!svgExistsCache.has(name));
 
   useEffect(() => {
+    // Skip if we already have a cached result
+    if (svgExistsCache.has(name)) {
+      setSvgExists(svgExistsCache.get(name)!);
+      setIsLoading(false);
+      return;
+    }
+
     // Check if SVG exists in /public/icons/
     const checkSvgExists = async () => {
       try {
         const svgPath = `/icons/${name}.svg`;
         const response = await fetch(svgPath, { method: 'HEAD' });
-        setSvgExists(response.ok);
+        const exists = response.ok;
+        // Cache the result to prevent duplicate requests
+        svgExistsCache.set(name, exists);
+        setSvgExists(exists);
       } catch {
+        svgExistsCache.set(name, false);
         setSvgExists(false);
       } finally {
         setIsLoading(false);
@@ -44,7 +81,7 @@ export function DynamicIcon({
     checkSvgExists();
   }, [name]);
 
-  // Show loading state
+  // Show loading state only for custom SVG checks (non-Lucide icons)
   if (isLoading) {
     return (
       <div
@@ -66,19 +103,6 @@ export function DynamicIcon({
         className={className}
         aria-hidden={ariaHidden}
         unoptimized
-      />
-    );
-  }
-
-  // Fallback to Lucide React
-  const LucideIconComponent = getLucideIcon(name);
-  
-  if (LucideIconComponent) {
-    return (
-      <LucideIconComponent
-        size={width}
-        className={className}
-        aria-hidden={ariaHidden}
       />
     );
   }

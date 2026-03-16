@@ -43,6 +43,7 @@ const apiStack = new ApiStack(app, 'PrimeDeals-Api', {
   proxySecurityGroupId: cdk.Fn.importValue(`${databaseStack.stackName}-ProxySecurityGroupId`),
   rdsProxy: databaseStack.proxy,
   dbSecret: databaseStack.secret,
+  smtpSecret: databaseStack.smtpSecret,
   bucket: storageStack.bucket,
   distribution: storageStack.distribution,
   // OpenSearch endpoint - uncomment after SearchStack is deployed to enable search functionality

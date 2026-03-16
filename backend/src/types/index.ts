@@ -39,14 +39,57 @@ export interface Lead {
   last_name?: string;
   email: string;
   phone?: string;
+  whatsapp_number?: string;
   country?: string;
+  subject?: string;
   enquiry?: string;
   car_id?: string;
   source: string;
+  enquiry_type: 'general' | 'test_drive' | 'car_enquiry';
   status: 'new' | 'contacted' | 'qualified' | 'converted' | 'closed';
   assigned_to?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface LeadWithCar extends Lead {
+  car?: {
+    id: string;
+    make: string;
+    model: string;
+    variant?: string;
+    year: number;
+    price: number;
+    primary_image_url?: string;
+  };
+}
+
+export interface LeadNote {
+  id: string;
+  lead_id: string;
+  note_text: string;
+  created_by?: string;
+  created_by_name?: string;
+  created_at: string;
+}
+
+export interface LeadStatusHistory {
+  id: string;
+  lead_id: string;
+  old_status?: string;
+  new_status: string;
+  changed_by?: string;
+  changed_by_name?: string;
+  changed_at: string;
+}
+
+export interface LeadStats {
+  total: number;
+  new: number;
+  contacted: number;
+  qualified: number;
+  converted: number;
+  closed: number;
 }
 
 // Chat types are now in chat.types.ts

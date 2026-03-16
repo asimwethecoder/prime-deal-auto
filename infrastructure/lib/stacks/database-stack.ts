@@ -14,6 +14,7 @@ export class DatabaseStack extends cdk.Stack {
   public readonly proxy: rds.DatabaseProxy;
   public readonly dbSecurityGroup: ec2.SecurityGroup;
   public readonly proxySecurityGroup: ec2.SecurityGroup;
+  public readonly smtpSecret: secretsmanager.ISecret;
 
   constructor(scope: Construct, id: string, props: DatabaseStackProps = {}) {
     super(scope, id, props);
@@ -101,6 +102,25 @@ export class DatabaseStack extends cdk.Stack {
       iamAuth: false,
     });
 
+    // SMTP Secret for email notifications
+    // Stores credentials for mail.primedealauto.co.za SMTP server
+    // The secret value should be set manually in AWS Console after deployment:
+    // { "host": "mail.primedealauto.co.za", "port": 465, "username": "sales@primedealauto.co.za", "password": "..." }
+    this.smtpSecret = new secretsmanager.Secret(this, 'SmtpSecret', {
+      secretName: 'primedealauto/smtp',
+      description: 'SMTP credentials for Prime Deal Auto email notifications',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          host: 'mail.primedealauto.co.za',
+          port: 465,
+          username: 'sales@primedealauto.co.za',
+        }),
+        generateStringKey: 'password',
+        excludePunctuation: false,
+        passwordLength: 32,
+      },
+    });
+
     // CloudFormation outputs
     new cdk.CfnOutput(this, 'ClusterEndpoint', {
       value: this.cluster.clusterEndpoint.hostname,
@@ -124,6 +144,12 @@ export class DatabaseStack extends cdk.Stack {
       value: this.proxy.endpoint,
       description: 'RDS Proxy endpoint — use as DB_HOST in Lambda',
       exportName: `${this.stackName}-RdsProxyEndpoint`,
+    });
+
+    new cdk.CfnOutput(this, 'SmtpSecretArn', {
+      value: this.smtpSecret.secretArn,
+      description: 'Secrets Manager secret ARN for SMTP credentials',
+      exportName: `${this.stackName}-SmtpSecretArn`,
     });
 
     new cdk.CfnOutput(this, 'ProxySecurityGroupId', {
