@@ -128,9 +128,9 @@ describe('ApiStack', () => {
       });
     });
 
-    test('Lambda has 30 second timeout', () => {
+    test('Lambda has 120 second timeout', () => {
       template.hasResourceProperties('AWS::Lambda::Function', {
-        Timeout: 30,
+        Timeout: 120,
       });
     });
 

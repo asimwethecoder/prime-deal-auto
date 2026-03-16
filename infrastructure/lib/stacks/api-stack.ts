@@ -87,7 +87,7 @@ export class ApiStack extends cdk.Stack {
       entry: path.join(__dirname, '../../../backend/src/lambda.ts'),
       handler: 'handler',
       memorySize: 1024,
-      timeout: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(120), // 120s for reindex (delete/create index + bulk index)
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [this.lambdaSecurityGroup],
