@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { WhatsAppFloatingButton } from '@/components/layout/WhatsAppFloatingButton';
 import { Icon } from '@/components/ui/Icon';
+import { useChatStore } from '@/lib/stores/chat-store';
 
 /** CSS filter to tint black icon to brand blue #405FF2 */
 const ACTIVE_ICON_FILTER = 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(500%) hue-rotate(220deg)';
@@ -20,6 +21,7 @@ const WHATSAPP_LINK = 'https://wa.link/r12kgt';
 export function ConditionalSiteLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isChatOpen = useChatStore((s) => s.isOpen);
   const isDashboard = DASHBOARD_PREFIXES.some((p) => pathname?.startsWith(p));
 
   if (isDashboard) {
@@ -48,10 +50,10 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
       </main>
       <Footer />
 
-      {/* Public-facing bottom nav: luxury glassmorphism (mobile only) - hidden on VDP pages */}
+      {/* Public-facing bottom nav: luxury glassmorphism (mobile only) - hidden on VDP pages and when chat is open */}
       {!isVDP && (
         <nav
-          className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-white/70 backdrop-blur-xl shadow-[0_-5px_25px_rgba(0,0,0,0.03)] border-t border-white/20 pb-[env(safe-area-inset-bottom,20px)]"
+          className={`fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-white/70 backdrop-blur-xl shadow-[0_-5px_25px_rgba(0,0,0,0.03)] border-t border-white/20 pb-[env(safe-area-inset-bottom,20px)] transition-opacity duration-200 ${isChatOpen ? 'opacity-0 pointer-events-none' : ''}`}
           role="navigation"
           aria-label="Mobile bottom navigation"
         >

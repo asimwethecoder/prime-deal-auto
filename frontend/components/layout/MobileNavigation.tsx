@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Home, Car, Phone, Search } from 'lucide-react';
+import { useChatStore } from '@/lib/stores/chat-store';
 
 interface NavItem {
   label: string;
@@ -31,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
  */
 export function MobileNavigation() {
   const pathname = usePathname();
+  const isChatOpen = useChatStore((s) => s.isOpen);
 
   const handleNavClick = (item: NavItem, e: React.MouseEvent) => {
     if (item.action === 'scroll-to-search') {
@@ -64,14 +66,16 @@ export function MobileNavigation() {
 
   return (
     <nav
-      className="
+      className={`
         fixed bottom-0 left-0 right-0 z-50
         sm:hidden
         bg-white/60 backdrop-blur-xl
         border-t border-white/20
         supports-[backdrop-filter]:bg-white/60
         [&:not(:has(~*))]:bg-white/90
-      "
+        transition-opacity duration-200
+        ${isChatOpen ? 'opacity-0 pointer-events-none' : ''}
+      `}
       style={{
         paddingBottom: 'env(safe-area-inset-bottom, 20px)',
       }}

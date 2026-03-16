@@ -54,7 +54,10 @@ export function MessageInput({ onSend, isLoading, disabled }: MessageInputProps)
   };
 
   return (
-    <div className="border-t border-[#E1E1E1] p-3 bg-white">
+    <div
+      className="border-t border-[#E1E1E1] p-3 bg-white"
+      style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
+    >
       <div className="flex items-end gap-2">
         <div className="flex-1 relative">
           <textarea
