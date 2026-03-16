@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const CLOUDFRONT_URL = process.env.NEXT_PUBLIC_CLOUDFRONT_URL || 'https://dyzz4logwgput.cloudfront.net';
 
@@ -27,30 +26,33 @@ export function HeroCarousel() {
     return () => clearInterval(id);
   }, []);
 
+  const nextIndex = (index + 1) % HERO_IMAGES.length;
+
   return (
     <div className="col-start-1 row-start-1 min-h-[90vh] w-full grid relative">
       <div className="col-start-1 row-start-1 min-h-[90vh] w-full relative">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={index}
-            className="absolute inset-0"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
+        {/* All images stacked — only the active one is visible via opacity */}
+        {HERO_IMAGES.map((src, i) => (
+          <div
+            key={src}
+            className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
+            style={{ opacity: i === index ? 1 : 0 }}
           >
             <Image
-              src={HERO_IMAGES[index]}
+              src={src}
               alt=""
               fill
-              priority={index === 0}
+              priority={i === 0}
+              loading={i === 0 ? 'eager' : 'lazy'}
               className="object-cover"
               sizes="100vw"
             />
-          </motion.div>
-        </AnimatePresence>
+          </div>
+        ))}
+        {/* Preload next image */}
+        <link rel="preload" as="image" href={HERO_IMAGES[nextIndex]} />
       </div>
-      {/* Dark overlay for legibility - white text and AI bar pop */}
+      {/* Dark overlay for legibility */}
       <div
         className="col-start-1 row-start-1 min-h-[90vh] w-full absolute inset-0 bg-black/60 pointer-events-none"
         aria-hidden
