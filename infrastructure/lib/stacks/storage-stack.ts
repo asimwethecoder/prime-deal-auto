@@ -33,7 +33,13 @@ export class StorageStack extends cdk.Stack {
       cors: [
         {
           allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.GET],
-          allowedOrigins: ['http://localhost:3000', 'https://primedealauto.co.za'], // Frontend domains
+          allowedOrigins: [
+            'http://localhost:3000',
+            'https://primedealauto.co.za',
+            'https://www.primedealauto.co.za',
+            'https://dj7y2dvmcct97.amplifyapp.com',
+            'https://main.dj7y2dvmcct97.amplifyapp.com',
+          ],
           allowedHeaders: ['*'],
           maxAge: 3000,
         },
