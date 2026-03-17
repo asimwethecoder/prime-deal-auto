@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Linkedin } from 'lucide-react';
 import { Icon } from '@/components/ui/Icon';
+import { getPhoneLink, formatPhoneNumber, formatWhatsAppNumber, getWhatsAppLink } from '@/lib/whatsapp';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -115,6 +116,33 @@ export function Footer() {
               </a>
             </div>
             <h3 className="text-[20px] leading-[30px] font-medium text-white mb-4">Connect With Us</h3>
+            <ul className="flex flex-col gap-3 mb-6">
+              <li>
+                <a href={getPhoneLink()} className="flex items-center gap-3 text-[15px] text-white hover:text-white/80">
+                  <Icon src="call-medicine-svgrepo-com.svg" width={18} height={18} className="invert shrink-0" aria-hidden />
+                  {formatPhoneNumber()}
+                </a>
+              </li>
+              <li>
+                <a href={getWhatsAppLink()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-[15px] text-white hover:text-white/80">
+                  <Icon src="whatsapp-svgrepo-com.svg" width={18} height={18} className="invert shrink-0" aria-hidden />
+                  {formatWhatsAppNumber()}
+                </a>
+              </li>
+              <li>
+                <a href="mailto:sales@primedealauto.co.za" className="flex items-center gap-3 text-[15px] text-white hover:text-white/80">
+                  <Icon src="email-1573-svgrepo-com.svg" width={18} height={18} className="invert shrink-0" aria-hidden />
+                  sales@primedealauto.co.za
+                </a>
+              </li>
+              <li>
+                <span className="flex items-center gap-3 text-[15px] text-white">
+                  <Icon src="location-svgrepo-com.svg" width={18} height={18} className="invert shrink-0" aria-hidden />
+                  515 Louis Botha Ave, Bramley
+                </span>
+              </li>
+            </ul>
+            <h3 className="text-[20px] leading-[30px] font-medium text-white mb-4">Follow Us</h3>
             <div className="flex gap-3">
               <a href="https://www.facebook.com/profile.php?id=61567384738083" target="_blank" rel="noopener noreferrer" className="w-[50px] h-[50px] md:w-10 md:h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-white/10 transition-colors" aria-label="Facebook">
                 <Icon src="facebook-svgrepo-com.svg" width={16} height={16} className="invert" aria-hidden />

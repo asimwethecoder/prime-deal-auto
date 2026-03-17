@@ -27,7 +27,7 @@ import { DynamicIcon } from '@/components/ui/DynamicIcon';
 import { getSpecIcon, ICON_STYLES } from '@/lib/constants/icon-mapping';
 import { ContactFormModal } from '@/components/contact/ContactFormModal';
 import { MobileVDPNavigation } from '@/components/layout/MobileVDPNavigation';
-import { generateWhatsAppLink } from '@/lib/whatsapp';
+import { generateWhatsAppLink, getPhoneLink, formatPhoneNumber } from '@/lib/whatsapp';
 
 interface CarDetailLayoutProps {
   car: CarWithImages;
@@ -540,10 +540,10 @@ function SellerSidebar({ onMessageClick, whatsappLink }: SellerSidebarProps) {
               <Phone className="h-5 w-5 text-secondary" aria-hidden />
             </div>
             <a
-              href="tel:+27732144072"
+              href={getPhoneLink()}
               className="text-[15px] leading-[28px] font-medium text-primary hover:text-secondary transition-colors"
             >
-              +27 73 214 4072
+              {formatPhoneNumber()}
             </a>
           </div>
         </div>

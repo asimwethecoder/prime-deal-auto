@@ -4,6 +4,7 @@
 import { formatPrice } from './utils/format';
 
 export const WHATSAPP_PHONE = '27732144072';
+export const CALL_PHONE = '27719404596';
 
 interface CarInfo {
   year: number;
@@ -34,12 +35,19 @@ export function getWhatsAppLink(): string {
  * Generate a tel: link for phone calls
  */
 export function getPhoneLink(): string {
-  return `tel:+${WHATSAPP_PHONE}`;
+  return `tel:+${CALL_PHONE}`;
 }
 
 /**
- * Format phone number for display
+ * Format phone number for display (call number)
  */
 export function formatPhoneNumber(): string {
+  return '+27 71 940 4596';
+}
+
+/**
+ * Format WhatsApp number for display
+ */
+export function formatWhatsAppNumber(): string {
   return '+27 73 214 4072';
 }
