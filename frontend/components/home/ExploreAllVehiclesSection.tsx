@@ -10,12 +10,13 @@ import type { CarWithImages } from '@/lib/api/types';
 
 const PAGE_SIZE = 4;
 
-type TabId = 'suv' | 'bakkie' | 'sedan';
+type TabId = 'suv' | 'bakkie' | 'sedan' | 'hatchback';
 
 const TABS: { id: TabId; label: string; bodyType: string }[] = [
   { id: 'suv', label: 'SUVs', bodyType: 'SUV' },
   { id: 'bakkie', label: 'Bakkies', bodyType: 'Bakkie' },
   { id: 'sedan', label: 'Sedans', bodyType: 'Sedan' },
+  { id: 'hatchback', label: 'Hatchbacks', bodyType: 'Hatchback' },
 ];
 
 export function ExploreAllVehiclesSection() {

@@ -324,6 +324,23 @@ export class CarRepository {
   }
 
 
+  async normalizeMakeCasing(): Promise<void> {
+    const pool = await getPool();
+    // Normalize make: FORD → Ford, RANGER model stays handled below
+    await pool.query(`
+      UPDATE cars SET make = CONCAT(UPPER(LEFT(make, 1)), LOWER(SUBSTRING(make, 2))), updated_at = NOW()
+      WHERE make ~ '[A-Z]{4,}' AND make != CONCAT(UPPER(LEFT(make, 1)), LOWER(SUBSTRING(make, 2)))
+    `);
+    // Fix known abbreviations that should stay uppercase
+    await pool.query(`UPDATE cars SET make = 'BMW', updated_at = NOW() WHERE LOWER(make) = 'bmw' AND make != 'BMW'`);
+    // Normalize model: RANGER → Ranger (4+ uppercase letters)
+    await pool.query(`
+      UPDATE cars SET model = CONCAT(UPPER(LEFT(model, 1)), LOWER(SUBSTRING(model, 2))), updated_at = NOW()
+      WHERE model ~ '^[A-Z]{4,}$'
+    `);
+    console.log('Normalized make/model casing');
+  }
+
   async findAllActive(): Promise<Car[]> {
     const pool = await getPool();
     const query = `

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { DynamicIcon } from '@/components/ui/DynamicIcon';
 import { getSearchFacets, getModelsForMake, getVariantsForModel } from '@/lib/api/search';
@@ -423,21 +424,28 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
       <p className="text-white/90 text-[14px] mt-8 mb-5 text-center font-normal">Or Browse Featured Model</p>
       <div className="flex flex-wrap justify-center gap-3">
         {BODY_TYPES.map(({ label, icon, query }) => (
-          <Link
+          <motion.div
             key={label}
-            href={`/cars?bodyType=${encodeURIComponent(query)}`}
-            className="flex flex-row items-center gap-2 h-10 px-3 py-2 bg-white/10 backdrop-blur-md border-[0.5px] border-white/20 hover:bg-white/20 text-white text-xs font-medium rounded-full transition-colors"
+            whileHover={{ scale: 1.1, rotate: [0, -5, 5, -5, 0] }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            className="pointer-fine:cursor-pointer"
           >
-            {icon && (
-              <DynamicIcon
-                name={icon}
-                width={20}
-                height={20}
-                className="shrink-0 w-5 h-5 text-white"
-              />
-            )}
-            <span>{label}</span>
-          </Link>
+            <Link
+              href={`/cars?bodyType=${encodeURIComponent(query)}`}
+              className="flex flex-row items-center gap-2 h-10 px-3 py-2 bg-white/10 backdrop-blur-md border-[0.5px] border-white/20 hover:bg-white/20 text-white text-xs font-medium rounded-full transition-colors"
+              data-cursor-magnetic
+            >
+              {icon && (
+                <DynamicIcon
+                  name={icon}
+                  width={20}
+                  height={20}
+                  className="shrink-0 w-5 h-5 text-white"
+                />
+              )}
+              <span>{label}</span>
+            </Link>
+          </motion.div>
         ))}
       </div>
     </div>

@@ -92,6 +92,17 @@ export class SearchService {
 
       // If OpenSearch returned results, use them
       if (result.total > 0) {
+        // Check if OpenSearch results have stale/missing image URLs
+        const hasMissingImages = result.hits.some((h: any) => !h.primary_image_url);
+        if (hasMissingImages) {
+          const pgResult = await this.carRepository.fullTextSearch(
+            query, params.filters, { limit, offset, sortBy, sortOrder }
+          );
+          if (pgResult.total > 0) {
+            console.warn('OpenSearch has missing images — using PostgreSQL fallback');
+            return this.formatResponse(pgResult, limit, offset);
+          }
+        }
         return this.formatResponse(result, limit, offset);
       }
 
@@ -159,9 +170,20 @@ export class SearchService {
     try {
       const osResult = await this.searchRepository.getFacets(filters);
 
-      // Check if OpenSearch returned any facet values
+      // Check if OpenSearch facets are complete (has all expected data)
       const hasData = Object.values(osResult).some(arr => arr.length > 0);
-      if (hasData) return osResult;
+      if (hasData) {
+        // Double-check against PostgreSQL to ensure completeness
+        const pgResult = await this.carRepository.getFacets(pgFacetFilters);
+        const pgMakeCount = (pgResult.make ?? []).length;
+        const osMakeCount = (osResult.make ?? []).length;
+        // If PostgreSQL has more makes, it's more complete
+        if (pgMakeCount > osMakeCount) {
+          console.warn('OpenSearch facets incomplete — using PostgreSQL fallback');
+          return pgResult;
+        }
+        return osResult;
+      }
 
       // OpenSearch facets empty — try PostgreSQL fallback
       const pgResult = await this.carRepository.getFacets(pgFacetFilters);
@@ -327,6 +349,9 @@ export class SearchService {
    * @returns Object with total indexed count
    */
   async reindex(): Promise<{ indexed: number }> {
+    // Normalize make/model casing in the database before reindexing
+    await this.carRepository.normalizeMakeCasing();
+
     // Fetch all active cars from database
     const cars = await this.carRepository.findAllActive();
     

@@ -12,7 +12,8 @@ import type { CarWithImages } from '@/lib/api/types';
 const CARDS_PER_PAGE = 3;
 const CAR_LIMIT = 12;
 const TOP_MAKES = 6;
-const FALLBACK_MAKES = ['Audi', 'BMW', 'Mercedes-Benz'];
+const PRIORITY_MAKES = ['Toyota', 'Ford', 'Isuzu', 'Nissan', 'Hyundai'];
+const FALLBACK_MAKES = ['Toyota', 'Ford', 'Isuzu', 'Nissan', 'Hyundai'];
 
 interface PopularMakesSectionProps {
   facets: FacetResult;
@@ -22,7 +23,13 @@ export function PopularMakesSection({ facets }: PopularMakesSectionProps) {
   const makeOptions = facets?.make ?? [];
   const topMakes = useMemo(() => {
     const fromFacets = makeOptions.slice(0, TOP_MAKES).map((m) => m.value);
-    return fromFacets.length > 0 ? fromFacets : FALLBACK_MAKES;
+    if (fromFacets.length === 0) return FALLBACK_MAKES;
+    // Merge priority makes with facet makes, deduped, priority first
+    const merged = [...PRIORITY_MAKES];
+    for (const m of fromFacets) {
+      if (!merged.includes(m)) merged.push(m);
+    }
+    return merged.slice(0, TOP_MAKES);
   }, [makeOptions]);
   const firstMake = topMakes[0] ?? '';
   const [activeMake, setActiveMake] = useState(firstMake);

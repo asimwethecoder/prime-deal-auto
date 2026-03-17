@@ -68,7 +68,7 @@ export function Footer() {
           <div>
             <h3 className="text-[20px] leading-[30px] font-medium text-white mb-4">Our Brands</h3>
             <ul className="flex flex-col gap-1" style={{ lineHeight: '35px' }}>
-              {['Aston Martin', 'Audi', 'Bentley', 'BMW', 'Bugatti', 'Ferrari', 'Jaguar', 'Lamborghini'].map((brand) => (
+              {['Toyota', 'Isuzu', 'Ford', 'Audi', 'BMW', 'Mercedes Benz', 'Volkswagen', 'Renault'].map((brand) => (
                 <li key={brand}>
                   <Link href={`/cars?make=${encodeURIComponent(brand)}`} className="text-[15px] text-white hover:text-white/80">
                     {brand}
