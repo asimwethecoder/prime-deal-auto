@@ -46,3 +46,27 @@ export async function saveImageMetadata(
     filename,
   });
 }
+
+/**
+ * Set an image as the primary image for a car (admin only).
+ */
+export async function setPrimaryImage(
+  carId: string,
+  imageId: string
+): Promise<{ id: string; carId: string; isPrimary: boolean }> {
+  const { put } = await import('./client');
+  return put<{ id: string; carId: string; isPrimary: boolean }>(
+    `/cars/${carId}/images/${imageId}/primary`
+  );
+}
+
+/**
+ * Delete an image from a car (admin only).
+ */
+export async function deleteCarImage(
+  carId: string,
+  imageId: string
+): Promise<{ deleted: boolean }> {
+  const { del } = await import('./client');
+  return del<{ deleted: boolean }>(`/cars/${carId}/images/${imageId}`);
+}

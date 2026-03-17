@@ -8,11 +8,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCar, updateCar, deleteCar } from '@/lib/api/cars';
+import { setPrimaryImage, deleteCarImage } from '@/lib/api/images';
 import { ApiError } from '@/lib/api/types';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { cn } from '@/lib/utils/cn';
+import Image from 'next/image';
 
 const CONDITION_OPTIONS = [
   { value: 'excellent', label: 'Excellent' },
@@ -68,10 +70,11 @@ const editListingSchema = z.object({
 });
 
 type EditListingFormValues = z.infer<typeof editListingSchema>;
-type TabId = 'details' | 'price' | 'features' | 'status';
+type TabId = 'details' | 'images' | 'price' | 'features' | 'status';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'details', label: 'Car Details' },
+  { id: 'images', label: 'Images' },
   { id: 'price', label: 'Price' },
   { id: 'features', label: 'Features' },
   { id: 'status', label: 'Status' },
@@ -314,6 +317,56 @@ export default function EditListingPage() {
                   <label className="block text-sm font-medium text-primary mb-2">Description (optional)</label>
                   <textarea rows={4} placeholder="Describe the vehicle..." className="w-full px-4 py-3 text-[15px] border border-[#E1E1E1] rounded-[12px] bg-white focus:outline-none focus:border-[#405FF2] resize-y" {...register('description')} />
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'images' && (
+              <div className="space-y-4">
+                <p className="text-[15px] text-[#050B20]">Click an image to set it as the primary (cover) image.</p>
+                {car?.images && car.images.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {car.images.map((img) => (
+                      <div key={img.id} className={cn('relative rounded-xl overflow-hidden border-2 group cursor-pointer', img.is_primary ? 'border-[#405FF2] ring-2 ring-[#405FF2]/20' : 'border-[#E1E1E1] hover:border-[#405FF2]/50')}>
+                        <div className="aspect-[4/3] relative">
+                          <Image src={img.cloudfront_url} alt="" fill className="object-cover" sizes="200px" />
+                        </div>
+                        {img.is_primary && (
+                          <div className="absolute top-2 left-2 bg-[#405FF2] text-white text-[11px] font-medium px-2 py-0.5 rounded-full">Primary</div>
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100">
+                          <div className="flex gap-2">
+                            {!img.is_primary && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await setPrimaryImage(carId, img.id);
+                                  queryClient.invalidateQueries({ queryKey: ['car', carId] });
+                                }}
+                                className="bg-[#405FF2] text-white text-[12px] font-medium px-3 py-1.5 rounded-lg hover:bg-[#3451d1] transition-colors"
+                              >
+                                Set Primary
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (confirm('Delete this image?')) {
+                                  await deleteCarImage(carId, img.id);
+                                  queryClient.invalidateQueries({ queryKey: ['car', carId] });
+                                }
+                              }}
+                              className="bg-red-500 text-white text-[12px] font-medium px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[14px] text-[#818181] py-8 text-center">No images uploaded yet.</p>
+                )}
               </div>
             )}
 
