@@ -3,10 +3,11 @@
 // Chat Widget Root Component
 // Manages visibility, state, and renders button + window
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ChatButton } from './ChatButton';
+import { AINudgeBubble } from './AINudgeBubble';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { isChatVisibleOnRoute } from '@/lib/utils/chat-visibility';
 import { getStoredSessionId } from '@/lib/utils/chat-session';
@@ -23,6 +24,7 @@ const ChatWindow = dynamic(
 export function ChatWidget() {
   const pathname = usePathname();
   const { isOpen, toggle, close, sessionId, setSessionId } = useChatStore();
+  const [showNudge, setShowNudge] = useState(true);
 
   // Check if chat should be visible on current route
   const isVisible = isChatVisibleOnRoute(pathname);
@@ -37,8 +39,11 @@ export function ChatWidget() {
     }
   }, [sessionId, setSessionId]);
 
+  const dismissNudge = useCallback(() => setShowNudge(false), []);
+
   // Handle toggle with focus management
   const handleToggle = useCallback(() => {
+    setShowNudge(false);
     toggle();
   }, [toggle]);
 
@@ -64,8 +69,11 @@ export function ChatWidget() {
       {/* Chat Window (conditionally rendered) */}
       {isOpen && <ChatWindow onClose={handleClose} />}
 
+      {/* Proactive Nudge Bubble */}
+      {!isOpen && showNudge && <AINudgeBubble onDismiss={dismissNudge} />}
+
       {/* Floating Action Button */}
-      <ChatButton isOpen={isOpen} onClick={handleToggle} />
+      <ChatButton isOpen={isOpen} onClick={handleToggle} nudgeActive={!isOpen && showNudge} />
     </>
   );
 }

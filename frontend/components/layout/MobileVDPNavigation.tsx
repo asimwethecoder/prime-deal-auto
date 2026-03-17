@@ -24,7 +24,7 @@ const PhoneIcon = () => (
 );
 
 const WhatsAppIcon = () => (
-  <Image src="/icons/whatsapp-svgrepo-com.svg" alt="" width={20} height={20} />
+  <Image src="/icons/whatsapp-svgrepo-com.svg" alt="" width={28} height={28} />
 );
 
 const MailIcon = () => (

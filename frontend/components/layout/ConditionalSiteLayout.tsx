@@ -101,8 +101,8 @@ export function ConditionalSiteLayout({ children }: { children: React.ReactNode 
               aria-label="Chat on WhatsApp"
               data-cursor-magnetic
             >
-              <span className="inline-block shrink-0 opacity-40">
-                <Icon src="whatsapp-svgrepo-com.svg" width={24} height={24} aria-hidden />
+              <span className="inline-block shrink-0">
+                <Icon src="whatsapp-svgrepo-com.svg" width={28} height={28} aria-hidden />
               </span>
               <span className="text-[12px] font-medium">WhatsApp</span>
             </a>

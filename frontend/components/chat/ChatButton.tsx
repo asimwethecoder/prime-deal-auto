@@ -7,9 +7,10 @@ import { X } from 'lucide-react';
 interface ChatButtonProps {
   isOpen: boolean;
   onClick: () => void;
+  nudgeActive?: boolean;
 }
 
-export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
+export function ChatButton({ isOpen, onClick, nudgeActive }: ChatButtonProps) {
   return (
     <motion.button
       onClick={onClick}
@@ -18,9 +19,11 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
       animate={
         isOpen
           ? {}
-          : { scale: [1, 1.05, 1], boxShadow: ['0 0 0 0 rgba(64,95,242,0)', '0 0 20px 4px rgba(64,95,242,0.35)', '0 0 0 0 rgba(64,95,242,0)'] }
+          : nudgeActive
+            ? { boxShadow: ['0px 0px 0px rgba(64, 95, 242, 0)', '0px 0px 15px rgba(64, 95, 242, 0.4)', '0px 0px 0px rgba(64, 95, 242, 0)'] }
+            : { scale: [1, 1.05, 1], boxShadow: ['0 0 0 0 rgba(64,95,242,0)', '0 0 20px 4px rgba(64,95,242,0.35)', '0 0 0 0 rgba(64,95,242,0)'] }
       }
-      transition={isOpen ? {} : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+      transition={isOpen ? {} : { duration: nudgeActive ? 2 : 2.5, repeat: Infinity, ease: 'easeInOut' }}
       whileHover={{ scale: 1.12 }}
       data-cursor-magnetic
     >
