@@ -41,7 +41,7 @@ export function Pagination({
   const router = useRouter();
   const searchParams = useSearchParams();
   const offset = (currentPage - 1) * limit;
-  const from = total === 0 ? 0 : offset + 1;
+  const from = total === 0 ? 0 : Math.min(offset + 1, total);
   const to = Math.min(offset + limit, total);
 
   const handlePageChange = (page: number) => {

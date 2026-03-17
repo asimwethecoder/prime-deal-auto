@@ -221,6 +221,15 @@ export default function MyListingsPage() {
   const hasMore = data?.hasMore ?? false;
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
+  // Redirect to page 1 if current page exceeds total pages
+  useEffect(() => {
+    if (data && page > totalPages) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete('page');
+      router.replace(`?${next.toString()}`);
+    }
+  }, [data, page, totalPages, searchParams, router]);
+
   const handleSearchSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();

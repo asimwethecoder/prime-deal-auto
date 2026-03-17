@@ -146,9 +146,12 @@ export class CarRepository {
 
     const dataParams = [...params, filters.limit, filters.offset];
     const dataResult = await pool.query(
-      `SELECT c.*, ci.cloudfront_url as primary_image_url
+      `SELECT c.*,
+        COALESCE(
+          (SELECT ci.cloudfront_url FROM car_images ci WHERE ci.car_id = c.id AND ci.is_primary = true LIMIT 1),
+          (SELECT ci.cloudfront_url FROM car_images ci WHERE ci.car_id = c.id ORDER BY ci.order_index ASC LIMIT 1)
+        ) as primary_image_url
        FROM cars c
-       LEFT JOIN car_images ci ON c.id = ci.car_id AND ci.is_primary = true
        WHERE ${whereClause} 
        ORDER BY c.${sortColumn} ${sortOrder}
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -305,9 +308,11 @@ export class CarRepository {
       SELECT c.id, c.make, c.model, c.variant, c.year, c.price, c.mileage,
         c.body_type, c.fuel_type, c.transmission, c.condition, c.color,
         c.description, c.features, c.status, c.created_at,
-        ci.cloudfront_url as primary_image_url
+        COALESCE(
+          (SELECT ci.cloudfront_url FROM car_images ci WHERE ci.car_id = c.id AND ci.is_primary = true LIMIT 1),
+          (SELECT ci.cloudfront_url FROM car_images ci WHERE ci.car_id = c.id ORDER BY ci.order_index ASC LIMIT 1)
+        ) as primary_image_url
       FROM cars c
-      LEFT JOIN car_images ci ON c.id = ci.car_id AND ci.is_primary = true
       WHERE ${whereClause}
       ORDER BY ${orderBy}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
