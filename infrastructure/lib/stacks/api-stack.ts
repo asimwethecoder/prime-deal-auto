@@ -278,7 +278,7 @@ export class ApiStack extends cdk.Stack {
       description: 'Prime Deal Auto REST API',
       deployOptions: {
         stageName: 'v1',
-        cachingEnabled: true,
+        cachingEnabled: false,
         cacheClusterEnabled: true,
         cacheClusterSize: '0.5',
         throttlingBurstLimit: 100,
@@ -387,7 +387,7 @@ export class ApiStack extends cdk.Stack {
       },
     });
 
-    // Configure cache for GET /search — 60 second TTL, cache all query params
+    // Configure cache for GET /search — cache all query params
     const searchMethodCfn = searchMethod.node.defaultChild as apigateway.CfnMethod;
     searchMethodCfn.addPropertyOverride('Integration.CacheKeyParameters', [
       'method.request.querystring.q',
