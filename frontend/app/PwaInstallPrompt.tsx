@@ -105,19 +105,15 @@ export function PwaInstallPrompt() {
           className="fixed right-0 top-1/2 z-[9998] flex -translate-y-1/2 flex-col gap-3 rounded-l-2xl border border-r-0 border-[#E1E1E1] bg-white p-4 shadow-lg sm:max-w-[280px]"
         >
           <div className="flex items-center gap-3">
-            <img
-              src="/logo/primedealautologo.jpeg"
-              alt=""
-              className="h-10 w-10 shrink-0 rounded-xl object-cover"
-              width={40}
-              height={40}
-            />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#405FF2]">
+              <img src="/icons/car-front-svgrepo-com.svg" alt="" width={24} height={24} className="invert" />
+            </div>
             <div>
-              <p className="font-semibold text-[#050B20]">Install Prime Deal Auto</p>
+              <p className="font-semibold text-[#050B20]">🚗 Never Miss a Deal</p>
               <p className="text-sm text-[#818181]">
                 {showIOSGuide
                   ? 'Tap the share button, then "Add to Home Screen"'
-                  : 'Add to home screen for quick access'}
+                  : 'Browse deals, save cars & book test drives — right from your home screen.'}
               </p>
             </div>
           </div>
@@ -129,7 +125,7 @@ export function PwaInstallPrompt() {
                 disabled={installing}
                 className="flex-1 rounded-xl bg-[#405FF2] px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
               >
-                {installing ? 'Installing…' : 'Install'}
+                {installing ? 'Installing…' : 'Install Free'}
               </button>
             )}
             <button
@@ -137,7 +133,7 @@ export function PwaInstallPrompt() {
               onClick={handleDismiss}
               className="flex-1 rounded-xl border border-[#E1E1E1] bg-[#F9FBFC] px-3 py-2 text-sm font-medium text-[#050B20] transition-opacity hover:opacity-80"
             >
-              {showIOSGuide ? 'Got it' : 'Not now'}
+              {showIOSGuide ? 'Got it' : 'Maybe Later'}
             </button>
           </div>
         </motion.div>

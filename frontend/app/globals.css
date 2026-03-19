@@ -29,6 +29,16 @@ html.custom-cursor-active body {
    Chat Widget Animations
    ============================================ */
 
+/* Bottom sheet slide up */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Chat window slide up animation */
 @keyframes chat-slide-up {
   from {
@@ -87,6 +97,10 @@ html.custom-cursor-active body {
 
 /* Animation utility classes */
 @layer utilities {
+  .animate-slide-up {
+    animation: slide-up 300ms ease-out forwards;
+  }
+
   .animate-chat-slide-up {
     animation: chat-slide-up 200ms ease-out forwards;
   }

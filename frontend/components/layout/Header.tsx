@@ -2,7 +2,7 @@
 
 // Header Component - Site-wide navigation
 // Home: transparent over hero, solid primary on scroll. Other pages: always solid primary (#050B20) with white text.
-// Mobile: inline menu below header bar (no full-screen overlay).
+// Mobile: bottom sheet menu triggered from bottom nav.
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -65,7 +65,6 @@ export function Header() {
 
   // Render auth section based on state
   const renderAuthSection = () => {
-    // Show loading skeleton while checking auth
     if (isLoading) {
       return (
         <div className="flex items-center gap-2">
@@ -74,7 +73,6 @@ export function Header() {
       );
     }
 
-    // Authenticated user
     if (isAuthenticated && user) {
       return (
         <>
@@ -106,30 +104,24 @@ export function Header() {
       );
     }
 
-    // Not authenticated
     return (
-      <>
-        <Link
-          href="/login"
-          className={`flex items-center gap-2 ${navLinkClass}`}
-        >
-          <Icon
-            src="signin-svgrepo-com.svg"
-            width={18}
-            height={18}
-            className="invert shrink-0"
-            aria-hidden
-          />
-          Sign In
-        </Link>
-        <Link href="/register" className={navLinkClass}>
-          Register
-        </Link>
-      </>
+      <Link
+        href="/login"
+        className={`flex items-center gap-2 ${navLinkClass}`}
+      >
+        <Icon
+          src="signin-svgrepo-com.svg"
+          width={18}
+          height={18}
+          className="invert shrink-0"
+          aria-hidden
+        />
+        Sign In
+      </Link>
     );
   };
 
-  // Render mobile auth section (inline below header, white text)
+  // Render mobile auth section
   const renderMobileAuthSection = () => {
     if (isLoading) {
       return (
@@ -164,15 +156,10 @@ export function Header() {
     }
 
     return (
-      <>
-        <Link href="/login" className={linkClass} onClick={closeMobileMenu}>
-          <Icon src="signin-svgrepo-com.svg" width={18} height={18} className="invert" aria-hidden />
-          Sign In
-        </Link>
-        <Link href="/register" className={linkClass} onClick={closeMobileMenu}>
-          Register
-        </Link>
-      </>
+      <Link href="/login" className={linkClass} onClick={closeMobileMenu}>
+        <Icon src="signin-svgrepo-com.svg" width={18} height={18} className="invert" aria-hidden />
+        Sign In
+      </Link>
     );
   };
 
@@ -240,7 +227,7 @@ export function Header() {
             </nav>
             {renderAuthSection()}
             <Link
-              href="/ad-listing"
+              href={isAuthenticated ? '/dashboard/listings/add' : '/login'}
               className="bg-white text-primary px-6 py-2.5 rounded-full text-[15px] font-medium hover:bg-white/90 transition-colors shrink-0"
             >
               Add Listing
@@ -263,36 +250,45 @@ export function Header() {
           </button>
         </div>
 
-        {/* Mobile Navigation - inline below header; solid bg + shadow so it doesn’t conflict with hero/search */}
+        {/* Mobile Bottom Sheet Menu */}
         {mobileMenuOpen && (
-          <nav
-            className="lg:hidden py-4 px-4 sm:px-6 border-t border-white/20 bg-primary shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
-            role="navigation"
-            aria-label="Mobile navigation"
-          >
-            <div className="flex flex-col gap-0.5">
-              <Link href="/" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
-                Home
-              </Link>
-              <Link href="/about" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
-                About
-              </Link>
-              <Link href="/cars" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
-                Cars
-              </Link>
-              <Link href="/contact" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
-                Contact
-              </Link>
-              {renderMobileAuthSection()}
-              <Link
-                href="/ad-listing"
-                className="min-h-[44px] flex items-center justify-center bg-white text-primary px-6 py-3 rounded-full text-[15px] font-medium hover:bg-white/90 transition-colors mt-2"
-                onClick={closeMobileMenu}
-              >
-                Add Listing
-              </Link>
-            </div>
-          </nav>
+          <>
+            <div
+              className="lg:hidden fixed inset-0 z-[998] bg-black/50 backdrop-blur-sm"
+              onClick={closeMobileMenu}
+              aria-hidden
+            />
+            <nav
+              className="lg:hidden fixed bottom-0 left-0 right-0 z-[999] bg-primary rounded-t-3xl py-6 px-6 animate-slide-up"
+              role="navigation"
+              aria-label="Mobile navigation"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 1.5rem)' }}
+            >
+              <div className="w-10 h-1 bg-white/30 rounded-full mx-auto mb-5" aria-hidden />
+              <div className="flex flex-col gap-0.5">
+                <Link href="/" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+                  Home
+                </Link>
+                <Link href="/about" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+                  About
+                </Link>
+                <Link href="/cars" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+                  Cars
+                </Link>
+                <Link href="/contact" className="min-h-[44px] flex items-center text-white hover:text-white/90 transition-colors font-medium py-3" onClick={closeMobileMenu}>
+                  Contact
+                </Link>
+                {renderMobileAuthSection()}
+                <Link
+                  href={isAuthenticated ? '/dashboard/listings/add' : '/login'}
+                  className="min-h-[44px] flex items-center justify-center bg-white text-primary px-6 py-3 rounded-full text-[15px] font-medium hover:bg-white/90 transition-colors mt-2"
+                  onClick={closeMobileMenu}
+                >
+                  Add Listing
+                </Link>
+              </div>
+            </nav>
+          </>
         )}
       </div>
     </header>
