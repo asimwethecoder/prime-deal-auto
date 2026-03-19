@@ -1,13 +1,16 @@
 'use client';
 
+import { useEffect } from 'react';
 import { ConditionalSiteLayout } from '@/components/layout/ConditionalSiteLayout';
-import { CustomCursor } from '@/components/cursor/CustomCursor';
 
 export function AppWithCursor({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <CustomCursor />
-      <ConditionalSiteLayout>{children}</ConditionalSiteLayout>
-    </>
-  );
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: fine)');
+    const toggle = () => document.documentElement.classList.toggle('custom-cursor-active', mq.matches);
+    toggle();
+    mq.addEventListener('change', toggle);
+    return () => mq.removeEventListener('change', toggle);
+  }, []);
+
+  return <ConditionalSiteLayout>{children}</ConditionalSiteLayout>;
 }

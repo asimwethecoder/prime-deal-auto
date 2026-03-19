@@ -20,9 +20,9 @@
   }
 }
 
-/* Custom cursor: hide default pointer when custom cursor is active (pointer: fine only) */
+/* Custom cursor: pointer hand everywhere on desktop */
 html.custom-cursor-active body {
-  cursor: none;
+  cursor: pointer;
 }
 
 /* ============================================
