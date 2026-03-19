@@ -59,7 +59,7 @@ export function Footer() {
             <h3 className="text-[20px] leading-[30px] font-medium text-white mb-4">Quick Links</h3>
             <ul className="flex flex-col gap-1" style={{ lineHeight: '35px' }}>
               <li><Link href="/contact" className="text-[15px] text-white hover:text-white/80">Get in Touch</Link></li>
-              <li><Link href="/help" className="text-[15px] text-white hover:text-white/80">Help center</Link></li>
+              <li><Link href="/contact" className="text-[15px] text-white hover:text-white/80">Help center</Link></li>
               <li><Link href="/contact" className="text-[15px] text-white hover:text-white/80">Live chat</Link></li>
               <li><Link href="/how-it-works" className="text-[15px] text-white hover:text-white/80">How it works</Link></li>
             </ul>
