@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { DynamicIcon } from '@/components/ui/DynamicIcon';
-import { getSearchFacets, getModelsForMake, getVariantsForModel } from '@/lib/api/search';
+import { getSearchFacets } from '@/lib/api/search';
 import { cn } from '@/lib/utils/cn';
 
 const BODY_TYPES: Array<{ label: string; icon?: string; query: string }> = [
@@ -53,18 +53,18 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
     staleTime: 60_000,
   });
 
-  // Fetch models when make is selected
-  const { data: models, isLoading: modelsLoading } = useQuery({
-    queryKey: ['models-for-make', selectedMake],
-    queryFn: () => getModelsForMake(selectedMake),
+  // Fetch model facets when make is selected
+  const { data: modelFacets, isLoading: modelsLoading } = useQuery({
+    queryKey: ['search-facets', selectedMake],
+    queryFn: () => getSearchFacets({ make: selectedMake }),
     enabled: !!selectedMake,
     staleTime: 30_000,
   });
 
-  // Fetch variants when make and model are selected
-  const { data: variants, isLoading: variantsLoading } = useQuery({
-    queryKey: ['variants-for-model', selectedMake, selectedModel],
-    queryFn: () => getVariantsForModel(selectedMake, selectedModel),
+  // Fetch variant facets when make and model are selected
+  const { data: variantFacets, isLoading: variantsLoading } = useQuery({
+    queryKey: ['search-facets', selectedMake, selectedModel],
+    queryFn: () => getSearchFacets({ make: selectedMake, model: selectedModel }),
     enabled: !!selectedMake && !!selectedModel,
     staleTime: 30_000,
   });
@@ -231,17 +231,17 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
                   {modelsLoading ? (
                     <div className="px-4 py-2 text-[15px] leading-[35px] text-gray-500">Loading...</div>
                   ) : (
-                    (models ?? []).map(({ text }) => (
+                    (modelFacets?.model ?? []).map((item: { value: string; count: number }) => (
                       <button
-                        key={text}
+                        key={item.value}
                         type="button"
-                        onClick={() => handleModelSelect(text)}
+                        onClick={() => handleModelSelect(item.value)}
                         className={cn(
                           "block w-full px-4 py-2 text-left text-[15px] leading-[35px] text-[#050B20] hover:bg-[#EEF1FB] transition-colors",
-                          selectedModel === text && "bg-[#EEF1FB]"
+                          selectedModel === item.value && "bg-[#EEF1FB]"
                         )}
                       >
-                        {text}
+                        {item.value}
                       </button>
                     ))
                   )}
@@ -293,17 +293,17 @@ export function EnhancedHeroSearch({ totalCount = 0 }: EnhancedHeroSearchProps) 
                   {variantsLoading ? (
                     <div className="px-4 py-2 text-[15px] leading-[35px] text-gray-500">Loading...</div>
                   ) : (
-                    (variants ?? []).map(({ text }) => (
+                    (variantFacets?.variant ?? []).map((item: { value: string; count: number }) => (
                       <button
-                        key={text}
+                        key={item.value}
                         type="button"
-                        onClick={() => handleVariantSelect(text)}
+                        onClick={() => handleVariantSelect(item.value)}
                         className={cn(
                           "block w-full px-4 py-2 text-left text-[15px] leading-[35px] text-[#050B20] hover:bg-[#EEF1FB] transition-colors",
-                          selectedVariant === text && "bg-[#EEF1FB]"
+                          selectedVariant === item.value && "bg-[#EEF1FB]"
                         )}
                       >
-                        {text}
+                        {item.value}
                       </button>
                     ))
                   )}
