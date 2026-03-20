@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Careers',
   description:
     'Join the Prime Deal Auto team. Explore career opportunities at one of Johannesburg\'s leading used car dealerships.',
+  alternates: { canonical: '/careers' },
 };
 
 const VALUES = [

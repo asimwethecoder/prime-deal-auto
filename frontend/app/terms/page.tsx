@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: 'Terms & Conditions',
   description:
     'Terms and Conditions for using Prime Deal Auto website and services.',
+  alternates: { canonical: '/terms' },
 };
 
 export default function TermsPage() {

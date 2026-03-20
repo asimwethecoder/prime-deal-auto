@@ -4,6 +4,7 @@ import { Providers } from './providers';
 import { AppWithCursor } from './AppWithCursor';
 import { PwaRegister } from './PwaRegister';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
+import { GoogleAnalytics } from '@/components/GoogleAnalytics';
 import './globals.css';
 
 // Load DM Sans font with next/font for optimization
@@ -55,8 +56,7 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   verification: {
-    // Add Google Search Console verification when available
-    // google: 'your-verification-code',
+    google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION || '',
   },
 };
 
@@ -68,6 +68,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${dmSans.variable} ${bebasNeue.variable} font-sans antialiased flex flex-col min-h-screen`}>
+        <GoogleAnalytics />
         <Providers>
           <PwaRegister />
           <PwaInstallPrompt />

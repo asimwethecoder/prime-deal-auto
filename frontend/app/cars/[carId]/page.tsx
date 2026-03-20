@@ -29,6 +29,7 @@ export async function generateMetadata({ params }: CarDetailPageProps): Promise<
     return {
       title,
       description,
+      alternates: { canonical: `/cars/${carId}` },
       openGraph: {
         title,
         description: car.description,

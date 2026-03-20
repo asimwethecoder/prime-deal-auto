@@ -16,6 +16,8 @@ Prime Deal Auto is located at 515 Louis Botha Ave, Savoy, Johannesburg, 2090. We
 - [About Us](https://primedealauto.co.za/about): Company information and values
 - [Contact](https://primedealauto.co.za/contact): Get in touch with our team
 - [Ad Listing](https://primedealauto.co.za/ad-listing): List your car for sale
+- [FAQs](https://primedealauto.co.za/faqs): Frequently asked questions about buying cars
+- [Careers](https://primedealauto.co.za/careers): Career opportunities at Prime Deal Auto
 
 ## Inventory Features
 
@@ -50,7 +52,9 @@ Each car listing includes:
 ## Optional
 
 - [Sitemap](https://primedealauto.co.za/sitemap.xml): Complete list of all pages and car listings
-- [Sign In](https://primedealauto.co.za/signin): User authentication (coming soon)
+- [Terms & Conditions](https://primedealauto.co.za/terms): Website terms of use
+- [Privacy Notice](https://primedealauto.co.za/privacy): How we handle your data
+- [Sign In](https://primedealauto.co.za/signin): User authentication
 `;
 
   return new Response(content, {

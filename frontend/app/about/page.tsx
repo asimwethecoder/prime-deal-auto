@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: 'About Us',
   description:
     'Prime Deal Auto – quality pre-owned vehicles from our Bramley, Johannesburg base. Transparency, affordability, and exceptional service across Southern Africa.',
+  alternates: { canonical: '/about' },
 };
 
 const WHY_CHOOSE_ITEMS = [
@@ -40,8 +41,30 @@ const WHY_CHOOSE_ITEMS = [
 ];
 
 export default function AboutPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Prime Deal Auto',
+    url: 'https://primedealauto.co.za',
+    logo: 'https://primedealauto.co.za/logo/primedealautologo.jpeg',
+    description: 'Quality pre-owned vehicles from Bramley, Johannesburg. Transparency, affordability, and exceptional service across Southern Africa.',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: '515 Louis Botha Ave, Savoy',
+      addressLocality: 'Johannesburg',
+      postalCode: '2090',
+      addressCountry: 'ZA',
+    },
+    telephone: '+27732144072',
+    sameAs: ['https://www.facebook.com/profile.php?id=61567384738083'],
+  };
+
   return (
     <div className="min-h-screen bg-white rounded-t-[80px]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Breadcrumb */}
         <nav className="mb-2" aria-label="Breadcrumb">

@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: 'Privacy Notice',
   description:
     'Privacy Notice for Prime Deal Auto – how we collect, use, and protect your personal information.',
+  alternates: { canonical: '/privacy' },
 };
 
 export default function PrivacyPage() {

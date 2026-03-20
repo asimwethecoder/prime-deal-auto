@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: 'Browse Cars',
   description:
     'Browse our complete inventory of quality used and new vehicles at Prime Deal Auto.',
+  alternates: { canonical: '/cars' },
 };
 
 interface CarsPageProps {

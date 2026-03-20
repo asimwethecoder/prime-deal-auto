@@ -38,6 +38,7 @@ const SHOW_FEATURED_CARS = false;
 export const metadata: Metadata = {
   title: 'Home',
   description: 'Find your perfect car at Prime Deal Auto. Browse quality used and new vehicles in South Africa.',
+  alternates: { canonical: '/' },
 };
 
 export default async function HomePage() {
@@ -66,8 +67,39 @@ export default async function HomePage() {
         : 'Unable to load cars. Please check your connection and try again.';
   }
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AutoDealer',
+    name: 'Prime Deal Auto',
+    url: 'https://primedealauto.co.za',
+    logo: 'https://primedealauto.co.za/logo/primedealautologo.jpeg',
+    description: 'Quality used and new cars at unbeatable prices in Johannesburg, South Africa.',
+    telephone: '+27732144072',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: '515 Louis Botha Ave, Savoy',
+      addressLocality: 'Johannesburg',
+      postalCode: '2090',
+      addressCountry: 'ZA',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: -26.1496,
+      longitude: 28.0738,
+    },
+    openingHoursSpecification: [
+      { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday'], opens: '08:00', closes: '17:00' },
+      { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Saturday', opens: '09:00', closes: '13:00' },
+    ],
+    sameAs: ['https://www.facebook.com/profile.php?id=61567384738083'],
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
       {/* Hero Section: 90vh, content vertically centered */}
       <section className="relative grid grid-cols-1 grid-rows-1 min-h-[90vh] overflow-hidden">
         <HeroCarousel />

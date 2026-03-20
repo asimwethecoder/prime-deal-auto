@@ -4,6 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Add Listing',
   description: 'List your car for sale with Prime Deal Auto.',
+  alternates: { canonical: '/ad-listing' },
 };
 
 export default function AddListingPage() {

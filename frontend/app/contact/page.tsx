@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: 'Contact',
   description:
     'Get in touch with Prime Deal Auto – we are here to help you find your perfect car. Send an enquiry and we will respond as soon as we can.',
+  alternates: { canonical: '/contact' },
 };
 
 const CONTACT = {
@@ -24,8 +25,28 @@ const iconSecondaryClass =
   '[filter:invert(28%)_sepia(98%)_saturate(1000%)_hue-rotate(210deg)_brightness(0.95)_contrast(95%)]';
 
 export default function ContactPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AutoDealer',
+    name: 'Prime Deal Auto',
+    telephone: '+27732144072',
+    email: 'sales@primedealauto.co.za',
+    url: 'https://primedealauto.co.za/contact',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: '515 Louis Botha Avenue, Bramley',
+      addressLocality: 'Johannesburg',
+      postalCode: '2090',
+      addressCountry: 'ZA',
+    },
+  };
+
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
       {/* Hero: dark bar + breadcrumb + title */}
       <section className="bg-primary text-white">
         <div className="max-w-[1700px] mx-auto px-[13.54%] py-8">
