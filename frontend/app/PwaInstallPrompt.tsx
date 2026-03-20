@@ -109,7 +109,7 @@ export function PwaInstallPrompt() {
               <img src="/icons/car-front-svgrepo-com.svg" alt="" width={24} height={24} className="invert" />
             </div>
             <div>
-              <p className="font-semibold text-[#050B20]">🚗 Never Miss a Deal</p>
+              <p className="font-semibold text-[#050B20]">Never Miss a Deal</p>
               <p className="text-sm text-[#818181]">
                 {showIOSGuide
                   ? 'Tap the share button, then "Add to Home Screen"'
@@ -125,7 +125,7 @@ export function PwaInstallPrompt() {
                 disabled={installing}
                 className="flex-1 rounded-xl bg-[#405FF2] px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
               >
-                {installing ? 'Installing…' : 'Install Free'}
+                {installing ? 'Installing…' : 'Install Now'}
               </button>
             )}
             <button
