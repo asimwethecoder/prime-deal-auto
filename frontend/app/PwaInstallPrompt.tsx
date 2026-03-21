@@ -112,7 +112,7 @@ export function PwaInstallPrompt() {
               <p className="font-semibold text-[#050B20]">Never Miss a Deal</p>
               <p className="text-sm text-[#818181]">
                 {showIOSGuide
-                  ? 'Tap the share button, then "Add to Home Screen"'
+                  ? 'Tap the share button, then "Add App to Home Screen"'
                   : 'Browse deals, save cars & book test drives — right from your home screen.'}
               </p>
             </div>
@@ -125,7 +125,7 @@ export function PwaInstallPrompt() {
                 disabled={installing}
                 className="flex-1 rounded-xl bg-[#405FF2] px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
               >
-                {installing ? 'Installing…' : 'Install Now'}
+                {installing ? 'Installing…' : 'Install App'}
               </button>
             )}
             <button
