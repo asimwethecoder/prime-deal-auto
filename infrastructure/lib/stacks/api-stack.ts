@@ -504,6 +504,13 @@ export class ApiStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.COGNITO,
     }); // Admin group checked in Lambda
 
+    // /admin/{proxy+} — catch-all for admin routes (avoids Lambda policy size limit)
+    const adminProxyResource = adminResource.addResource('{proxy+}');
+    adminProxyResource.addMethod('ANY', lambdaIntegration, {
+      authorizer: cognitoAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
     // Chat Lambda integration (separate from main Lambda)
     const chatLambdaIntegration = new apigateway.LambdaIntegration(chatLambda, {
       proxy: true,
