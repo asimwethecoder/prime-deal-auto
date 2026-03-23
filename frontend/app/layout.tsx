@@ -4,7 +4,7 @@ import { Providers } from './providers';
 import { AppWithCursor } from './AppWithCursor';
 import { PwaRegister } from './PwaRegister';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
-import { GoogleAnalytics } from '@/components/GoogleAnalytics';
+import { GoogleTagManager, GoogleTagManagerNoscript } from '@/components/GoogleTagManager';
 import './globals.css';
 
 // Load DM Sans font with next/font for optimization
@@ -67,8 +67,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <GoogleTagManager />
+      </head>
       <body className={`${dmSans.variable} ${bebasNeue.variable} font-sans antialiased flex flex-col min-h-screen`}>
-        <GoogleAnalytics />
+        <GoogleTagManagerNoscript />
         <Providers>
           <PwaRegister />
           <PwaInstallPrompt />
