@@ -47,7 +47,8 @@ const contactSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
   surname: z.string().min(1, 'Surname is required').max(100),
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  phone: z.string().max(50).optional(),
+  phone: z.string().min(1, 'Phone number is required').max(50),
+  whatsAppNumber: z.string().min(1, 'WhatsApp number is required').max(50),
   preferredDate: z.string().optional(),
   message: z.string().min(1, 'Message is required').max(2000),
 });
@@ -84,12 +85,14 @@ export function ContactFormModal({ isOpen, onClose, car, formType }: ContactForm
       surname: '',
       email: '',
       phone: '',
+      whatsAppNumber: '',
       preferredDate: '',
       message: generateMessage(car),
     },
   });
 
   const phone = watch('phone');
+  const whatsAppNumber = watch('whatsAppNumber');
 
   // Reset form when modal opens with new car
   useEffect(() => {
@@ -99,6 +102,7 @@ export function ContactFormModal({ isOpen, onClose, car, formType }: ContactForm
         surname: '',
         email: '',
         phone: '',
+        whatsAppNumber: '',
         preferredDate: '',
         message: generateMessage(car),
       });
@@ -115,6 +119,7 @@ export function ContactFormModal({ isOpen, onClose, car, formType }: ContactForm
         lastName: data.surname.trim(),
         email: data.email.trim(),
         phone: data.phone?.trim() || undefined,
+        whatsAppNumber: data.whatsAppNumber?.trim() || undefined,
         subject: generateSubject(car, formType),
         enquiry: data.message.trim(),
         carId: car?.id,
@@ -204,18 +209,36 @@ export function ContactFormModal({ isOpen, onClose, car, formType }: ContactForm
                 </div>
                 <Input label="Email" type="email" placeholder="you@example.com" error={errors.email?.message} {...register('email')} />
                 <div>
-                  <label className="block text-[13px] leading-[17px] text-[#818181] mb-2">Phone (optional)</label>
+                  <label className="block text-[13px] leading-[17px] text-[#818181] mb-2">Cell Number</label>
                   <PhoneInput
                     international
                     defaultCountry="ZA"
                     value={phone}
-                    onChange={(v: string | undefined) => setValue('phone', v || '')}
+                    onChange={(v: string | undefined) => setValue('phone', v || '', { shouldValidate: true })}
                     className={cn(
                       'flex rounded-[12px] border border-[#E1E1E1] bg-white overflow-hidden',
-                      'focus-within:border-[#405FF2] transition-colors'
+                      'focus-within:border-[#405FF2] transition-colors',
+                      errors.phone && 'border-red-500'
                     )}
                     numberInputProps={{ className: 'w-full px-4 py-3 text-[15px] text-primary placeholder:text-gray-500 min-h-[48px] outline-none' }}
                   />
+                  {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-[13px] leading-[17px] text-[#818181] mb-2">WhatsApp Number</label>
+                  <PhoneInput
+                    international
+                    defaultCountry="ZA"
+                    value={whatsAppNumber}
+                    onChange={(v: string | undefined) => setValue('whatsAppNumber', v || '', { shouldValidate: true })}
+                    className={cn(
+                      'flex rounded-[12px] border border-[#E1E1E1] bg-white overflow-hidden',
+                      'focus-within:border-[#405FF2] transition-colors',
+                      errors.whatsAppNumber && 'border-red-500'
+                    )}
+                    numberInputProps={{ className: 'w-full px-4 py-3 text-[15px] text-primary placeholder:text-gray-500 min-h-[48px] outline-none' }}
+                  />
+                  {errors.whatsAppNumber && <p className="mt-1 text-sm text-red-600">{errors.whatsAppNumber.message}</p>}
                 </div>
                 {formType === 'test_drive' && (
                   <Input label="Preferred Date" type="date" {...register('preferredDate')} />

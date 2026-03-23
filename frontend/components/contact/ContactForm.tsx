@@ -17,8 +17,8 @@ const contactSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
   surname: z.string().min(1, 'Surname is required').max(100),
   email: z.string().min(1, 'Email is required').email('Invalid email address').max(255),
-  cellNumber: z.string().max(50).optional(),
-  whatsAppNumber: z.string().max(50).optional(),
+  cellNumber: z.string().min(1, 'Cell number is required').max(50),
+  whatsAppNumber: z.string().min(1, 'WhatsApp number is required').max(50),
   subject: z.string().min(1, 'Subject is required').max(200),
   message: z.string().min(1, 'Message is required').max(2000),
 });
@@ -142,7 +142,7 @@ export function ContactForm() {
             international
             defaultCountry={defaultCountry as any}
             value={cellNumber}
-            onChange={(v: string | undefined) => setValue('cellNumber', v || '')}
+            onChange={(v: string | undefined) => setValue('cellNumber', v || '', { shouldValidate: true })}
             className={cn(
               'flex rounded-[12px] border border-[#E1E1E1] bg-white overflow-hidden',
               'focus-within:border-[#405FF2] transition-colors duration-200',
@@ -166,7 +166,7 @@ export function ContactForm() {
             international
             defaultCountry={defaultCountry as any}
             value={whatsAppNumber}
-            onChange={(v: string | undefined) => setValue('whatsAppNumber', v || '')}
+            onChange={(v: string | undefined) => setValue('whatsAppNumber', v || '', { shouldValidate: true })}
             className={cn(
               'flex rounded-[12px] border border-[#E1E1E1] bg-white overflow-hidden',
               'focus-within:border-[#405FF2] transition-colors duration-200',
