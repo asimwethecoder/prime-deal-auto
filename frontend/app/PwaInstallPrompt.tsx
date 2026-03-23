@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { trackEvent } from '@/lib/api/analytics';
 
 const SESSION_KEY_DISMISSED = 'pwa-install-dismissed';
 const STORAGE_KEY_INSTALLED = 'pwa-installed';
@@ -77,6 +78,7 @@ export function PwaInstallPrompt() {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         try { localStorage.setItem(STORAGE_KEY_INSTALLED, '1'); } catch {}
+        trackEvent({ eventType: 'pwa_install', metadata: { method: 'browser_prompt' } });
       }
       setVisible(false);
     } catch {} finally {

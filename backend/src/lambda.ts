@@ -17,6 +17,7 @@ import {
   handleReorderImages,
 } from './handlers/images.handler';
 import { handleCreateLead } from './handlers/leads.handler';
+import { handleTrackEvent, handleGetAnalyticsStats } from './handlers/analytics.handler';
 import {
   handleGetLeads,
   handleGetLeadStats,
@@ -74,6 +75,10 @@ const routes: Route[] = [
 
   // Leads (contact form)
   { method: 'POST', pattern: /^\/leads$/, handler: handleCreateLead },
+
+  // Analytics (public tracking + admin stats)
+  { method: 'POST', pattern: /^\/analytics$/, handler: handleTrackEvent },
+  { method: 'GET', pattern: /^\/admin\/analytics\/stats$/, handler: handleGetAnalyticsStats },
 
   // Admin leads routes
   { method: 'GET', pattern: /^\/admin\/leads$/, handler: handleGetLeads },

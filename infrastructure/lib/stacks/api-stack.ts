@@ -494,6 +494,10 @@ export class ApiStack extends cdk.Stack {
     const leadsResource = this.api.root.addResource('leads');
     leadsResource.addMethod('POST', lambdaIntegration); // Public - submit lead
 
+    // /analytics routes (event tracking)
+    const analyticsResource = this.api.root.addResource('analytics');
+    analyticsResource.addMethod('POST', lambdaIntegration); // Public - track events
+
     // /admin routes
     const adminResource = this.api.root.addResource('admin');
     

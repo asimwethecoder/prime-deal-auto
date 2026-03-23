@@ -68,6 +68,14 @@ ALTER TABLE cars ADD COLUMN IF NOT EXISTS video_url VARCHAR(500);
 
 -- Add comment for documentation
 COMMENT ON COLUMN cars.video_url IS 'Optional video URL (YouTube, etc.) for the car listing';
+`,
+
+  '010_analytics_geo_indexes': `
+-- Migration: Add GIN index on analytics_events metadata for geo queries
+-- The metadata JSONB column stores country, city, region, timezone from CloudFront headers
+
+CREATE INDEX IF NOT EXISTS idx_analytics_metadata_gin ON analytics_events USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_analytics_metadata_country ON analytics_events ((metadata->>'country'));
 `
 };
 

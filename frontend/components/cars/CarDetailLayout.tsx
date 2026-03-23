@@ -28,6 +28,7 @@ import { getSpecIcon, ICON_STYLES } from '@/lib/constants/icon-mapping';
 import { ContactFormModal } from '@/components/contact/ContactFormModal';
 import { MobileVDPNavigation } from '@/components/layout/MobileVDPNavigation';
 import { generateWhatsAppLink, getPhoneLink, formatPhoneNumber } from '@/lib/whatsapp';
+import { useTrackCarView } from '@/hooks/useTrackCarView';
 
 interface CarDetailLayoutProps {
   car: CarWithImages;
@@ -35,6 +36,7 @@ interface CarDetailLayoutProps {
 }
 
 export function CarDetailLayout({ car, relatedCars }: CarDetailLayoutProps) {
+  useTrackCarView(car.id);
   const title = `${car.make} ${car.model}`;
   const subtitle = car.variant ? `${car.variant}` : `${car.year} ${car.model}`;
 
