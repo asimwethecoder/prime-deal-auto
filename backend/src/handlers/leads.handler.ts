@@ -10,6 +10,7 @@ interface CreateLeadBody {
   email: string;
   phone?: string;
   whatsappNumber?: string;
+  whatsAppNumber?: string;
   subject?: string;
   enquiry?: string;
   carId?: string;
@@ -38,7 +39,8 @@ export async function handleCreateLead(
     return error('Invalid JSON body', 'VALIDATION_ERROR', 400);
   }
 
-  const { firstName, lastName, email, phone, whatsappNumber, subject, enquiry, carId, enquiryType, source } = body;
+  const { firstName, lastName, email, phone, whatsappNumber, whatsAppNumber, subject, enquiry, carId, enquiryType, source } = body;
+  const resolvedWhatsApp = whatsappNumber || whatsAppNumber;
 
   // Validate email
   if (!email || typeof email !== 'string' || email.trim().length === 0) {
@@ -64,7 +66,7 @@ export async function handleCreateLead(
       lastName: typeof lastName === 'string' ? lastName.trim() || undefined : undefined,
       email: trimmedEmail,
       phone: typeof phone === 'string' ? phone.trim() || undefined : undefined,
-      whatsappNumber: typeof whatsappNumber === 'string' ? whatsappNumber.trim() || undefined : undefined,
+      whatsappNumber: typeof resolvedWhatsApp === 'string' ? resolvedWhatsApp.trim() || undefined : undefined,
       subject: typeof subject === 'string' ? subject.trim() || undefined : undefined,
       enquiry: typeof enquiry === 'string' ? enquiry.trim() || undefined : undefined,
       carId: typeof carId === 'string' && carId.trim() ? carId.trim() : undefined,
@@ -106,7 +108,7 @@ export async function handleCreateLead(
         last_name: lastName?.trim(),
         email: trimmedEmail,
         phone: phone?.trim(),
-        whatsapp_number: whatsappNumber?.trim(),
+        whatsapp_number: resolvedWhatsApp?.trim(),
         subject: subject?.trim(),
         enquiry: enquiry?.trim(),
         enquiry_type: validEnquiryType,
