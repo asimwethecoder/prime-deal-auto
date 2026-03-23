@@ -1,1 +1,1 @@
-{"statusCode":200,"body":"{\"success\":true,\"message\":\"Migration completed successfully\"}"}
+{"statusCode":200,"body":"{\"success\":true,\"message\":\"Migration completed successfully\",\"migration\":\"custom\"}"}
