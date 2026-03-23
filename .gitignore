@@ -31,6 +31,9 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# Lambda invoke output artifacts
+response.json
+
 # IDE
 .idea/
 .vscode/
