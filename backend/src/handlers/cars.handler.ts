@@ -35,14 +35,10 @@ export async function handleGetCars(
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> {
   const query = event.queryStringParameters || {};
-  const hasAuth = !!event.requestContext.authorizer?.claims;
   const statusFilter = query.status;
 
-  // Allow status filtering for any authenticated user (dashboard); public gets only active
-  let status: string | undefined;
-  if (hasAuth && statusFilter) {
-    status = statusFilter;
-  }
+  // Pass status filter directly — public defaults to 'active' in the service layer
+  const status = statusFilter || undefined;
 
   const input: ListCarsInput = {
     make: query.make,

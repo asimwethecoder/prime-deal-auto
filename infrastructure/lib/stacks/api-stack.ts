@@ -309,7 +309,30 @@ export class ApiStack extends cdk.Stack {
 
     // /cars routes
     const carsResource = this.api.root.addResource('cars');
-    carsResource.addMethod('GET', lambdaIntegration); // Public
+    const carsGetMethod = carsResource.addMethod('GET', lambdaIntegration, {
+      requestParameters: {
+        'method.request.querystring.status': false,
+        'method.request.querystring.limit': false,
+        'method.request.querystring.offset': false,
+        'method.request.querystring.sortBy': false,
+        'method.request.querystring.sortOrder': false,
+        'method.request.querystring.make': false,
+        'method.request.querystring.model': false,
+      },
+    }); // Public
+
+    // Configure cache keys for GET /cars so status filter is not ignored by cache
+    const carsGetMethodCfn = carsGetMethod.node.defaultChild as apigateway.CfnMethod;
+    carsGetMethodCfn.addPropertyOverride('Integration.CacheKeyParameters', [
+      'method.request.querystring.status',
+      'method.request.querystring.limit',
+      'method.request.querystring.offset',
+      'method.request.querystring.sortBy',
+      'method.request.querystring.sortOrder',
+      'method.request.querystring.make',
+      'method.request.querystring.model',
+    ]);
+    carsGetMethodCfn.addPropertyOverride('Integration.CacheNamespace', carsResource.resourceId);
     carsResource.addMethod('POST', lambdaIntegration, {
       authorizer: cognitoAuthorizer,
       authorizationType: apigateway.AuthorizationType.COGNITO,

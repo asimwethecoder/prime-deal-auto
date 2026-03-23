@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getCars, deleteCar } from '@/lib/api/cars';
+import { getCars, deleteCar, updateCar } from '@/lib/api/cars';
 import { reindexSearch } from '@/lib/api/search';
 import type { CarWithImages } from '@/lib/api/types';
 import { ApiError } from '@/lib/api/types';
@@ -52,7 +52,53 @@ function StatusBadge({ status }: { status: CarWithImages['status'] }) {
   );
 }
 
-function ListingTableRow({ car, onDelete }: { car: CarWithImages; onDelete?: (id: string) => void }) {
+const STATUS_ACTIONS: Record<string, Array<{ value: string; label: string; icon: string; variant: 'blue' | 'green' | 'dark' }>> = {
+  active: [
+    { value: 'sold', label: 'Mark Sold', icon: 'check-circle', variant: 'green' },
+    { value: 'pending', label: 'Unpublish', icon: 'eye-off', variant: 'dark' },
+  ],
+  pending: [
+    { value: 'active', label: 'Publish', icon: 'eye', variant: 'blue' },
+    { value: 'sold', label: 'Mark Sold', icon: 'check-circle', variant: 'green' },
+  ],
+  sold: [
+    { value: 'active', label: 'Republish', icon: 'eye', variant: 'blue' },
+    { value: 'pending', label: 'To Draft', icon: 'eye-off', variant: 'dark' },
+  ],
+};
+
+const ACTION_STYLES = {
+  blue: 'bg-[#405FF2] border-[#405FF2] text-white hover:scale-[1.02]',
+  green: 'bg-[#3D923A] border-[#3D923A] text-white hover:scale-[1.02]',
+  dark: 'bg-[#050B20] border-[#050B20] text-white hover:scale-[1.02]',
+};
+
+function StatusActions({ car, onStatusChange, isUpdating }: { car: CarWithImages; onStatusChange: (id: string, status: string) => void; isUpdating: boolean }) {
+  const actions = STATUS_ACTIONS[car.status] ?? STATUS_ACTIONS.active;
+  return (
+    <div className="flex items-center gap-2">
+      <StatusBadge status={car.status} />
+      {actions.map((action) => (
+        <button
+          key={action.value}
+          type="button"
+          onClick={() => onStatusChange(car.id, action.value)}
+          disabled={isUpdating}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-[30px] border px-[15px] py-[6px] text-[14px] leading-[24px] font-medium transition-transform duration-100',
+            ACTION_STYLES[action.variant],
+            isUpdating && 'opacity-50 cursor-not-allowed'
+          )}
+        >
+          <DynamicIcon name={action.icon} width={14} height={14} />
+          {action.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ListingTableRow({ car, onDelete, onStatusChange, isUpdating }: { car: CarWithImages; onDelete?: (id: string) => void; onStatusChange: (id: string, status: string) => void; isUpdating: boolean }) {
   const thumb = (car as { primary_image_url?: string }).primary_image_url ?? car.images?.[0]?.cloudfront_url;
   const priceZar = `R${Number(car.price).toLocaleString('en-ZA')}`;
 
@@ -88,7 +134,7 @@ function ListingTableRow({ car, onDelete }: { car: CarWithImages; onDelete?: (id
       <td className="py-4 px-2 text-[15px] leading-[26px] text-[#050B20] capitalize">{car.transmission}</td>
       <td className="py-4 px-2 text-[15px] leading-[26px] text-[#050B20] capitalize">{car.fuel_type}</td>
       <td className="py-4 px-2">
-        <StatusBadge status={car.status} />
+        <StatusActions car={car} onStatusChange={onStatusChange} isUpdating={isUpdating} />
       </td>
       <td className="py-4 pl-2">
         <div className="flex items-center gap-2">
@@ -115,7 +161,7 @@ function ListingTableRow({ car, onDelete }: { car: CarWithImages; onDelete?: (id
   );
 }
 
-function ListingCard({ car, onDelete }: { car: CarWithImages; onDelete?: (id: string) => void }) {
+function ListingCard({ car, onDelete, onStatusChange, isUpdating }: { car: CarWithImages; onDelete?: (id: string) => void; onStatusChange: (id: string, status: string) => void; isUpdating: boolean }) {
   const thumb = (car as { primary_image_url?: string }).primary_image_url ?? car.images?.[0]?.cloudfront_url;
   const priceZar = `R${Number(car.price).toLocaleString('en-ZA')}`;
 
@@ -154,9 +200,9 @@ function ListingCard({ car, onDelete }: { car: CarWithImages; onDelete?: (id: st
           </>
         )}
       </div>
-      <div className="flex items-center justify-between pt-2 border-t border-[#E1E1E1]">
-        <StatusBadge status={car.status} />
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 pt-2 border-t border-[#E1E1E1]">
+        <StatusActions car={car} onStatusChange={onStatusChange} isUpdating={isUpdating} />
+        <div className="flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => onDelete?.(car.id)}
@@ -194,6 +240,8 @@ export default function MyListingsPage() {
   const [reindexLoading, setReindexLoading] = useState(false);
   const [reindexSuccess, setReindexSuccess] = useState<string | null>(null);
   const [reindexError, setReindexError] = useState<string | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
 
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -213,6 +261,21 @@ export default function MyListingsPage() {
     queryFn: async () => {
       const res = await getCars(params);
       return res;
+    },
+  });
+
+  // Fetch counts per status for tab badges
+  const { data: statusCounts } = useQuery({
+    queryKey: ['dashboard-listings-counts', q],
+    queryFn: async () => {
+      const base = { limit: 1, offset: 0, ...(q.trim() && { model: q.trim() }) };
+      const [all, active, pending, sold] = await Promise.all([
+        getCars({ ...base, status: 'all' }),
+        getCars({ ...base, status: 'active' }),
+        getCars({ ...base, status: 'pending' }),
+        getCars({ ...base, status: 'sold' }),
+      ]);
+      return { all: all.total, active: active.total, pending: pending.total, sold: sold.total } as Record<string, number>;
     },
   });
 
@@ -251,7 +314,7 @@ export default function MyListingsPage() {
     [searchParams, router]
   );
 
-  const handleStatusChange = useCallback(
+  const handleTabChange = useCallback(
     (status: string) => {
       const next = new URLSearchParams(searchParams.toString());
       next.set('status', status);
@@ -260,6 +323,33 @@ export default function MyListingsPage() {
     },
     [searchParams, router]
   );
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => updateCar(id, { status: status as 'active' | 'pending' | 'sold' }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard-listings'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-listings-counts'] });
+      setStatusUpdating(null);
+      const label = variables.status === 'active' ? 'Published' : variables.status === 'pending' ? 'Draft' : 'Sold';
+      setStatusFeedback(`Listing marked as ${label}.`);
+    },
+    onError: () => {
+      setStatusUpdating(null);
+      setStatusFeedback('Failed to update status.');
+    },
+  });
+
+  const handleCarStatusChange = useCallback((id: string, status: string) => {
+    setStatusUpdating(id);
+    setStatusFeedback(null);
+    statusMutation.mutate({ id, status });
+  }, [statusMutation]);
+
+  useEffect(() => {
+    if (!statusFeedback) return;
+    const t = setTimeout(() => setStatusFeedback(null), 3000);
+    return () => clearTimeout(t);
+  }, [statusFeedback]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCar(id),
@@ -323,6 +413,20 @@ export default function MyListingsPage() {
           </p>
         </div>
 
+        {statusFeedback && (
+          <div
+            role="status"
+            className={cn(
+              'mb-4 rounded-xl border px-4 py-3 text-[15px]',
+              statusFeedback.startsWith('Failed')
+                ? 'border-red-200 bg-red-50 text-red-800'
+                : 'border-green-200 bg-green-50 text-green-800'
+            )}
+          >
+            {statusFeedback}
+          </div>
+        )}
+
         {deleteFeedback && (
           <div
             role="status"
@@ -361,7 +465,7 @@ export default function MyListingsPage() {
               <button
                 key={tab.value}
                 type="button"
-                onClick={() => handleStatusChange(tab.value)}
+                onClick={() => handleTabChange(tab.value)}
                 className={cn(
                   'px-6 py-3 text-[15px] font-medium transition-colors',
                   statusFilter === tab.value
@@ -370,6 +474,11 @@ export default function MyListingsPage() {
                 )}
               >
                 {tab.label}
+                {statusCounts && (
+                  <span className="ml-1.5 text-[12px] opacity-70">
+                    ({statusCounts[tab.value] ?? 0})
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -455,7 +564,7 @@ export default function MyListingsPage() {
                       </tr>
                     ) : (
                       cars.map((car) => (
-                        <ListingTableRow key={car.id} car={car} onDelete={handleDeleteClick} />
+                        <ListingTableRow key={car.id} car={car} onDelete={handleDeleteClick} onStatusChange={handleCarStatusChange} isUpdating={statusUpdating === car.id} />
                       ))
                     )}
                   </tbody>
@@ -467,7 +576,7 @@ export default function MyListingsPage() {
                   <p className="py-8 text-center text-[#050B20]">No listings found.</p>
                 ) : (
                   cars.map((car) => (
-                    <ListingCard key={car.id} car={car} onDelete={handleDeleteClick} />
+                    <ListingCard key={car.id} car={car} onDelete={handleDeleteClick} onStatusChange={handleCarStatusChange} isUpdating={statusUpdating === car.id} />
                   ))
                 )}
               </div>
