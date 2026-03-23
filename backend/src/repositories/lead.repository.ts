@@ -160,7 +160,7 @@ export class LeadRepository {
     `;
     const dataResult = await pool.query(dataQuery, [...params, limit, offset]);
 
-    return { leads: dataResult.rows.map(this.mapRowToLeadWithCar), total };
+    return { leads: dataResult.rows.map((row) => this.mapRowToLeadWithCar(row)), total };
   }
 
 
