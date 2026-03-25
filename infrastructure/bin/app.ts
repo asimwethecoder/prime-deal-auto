@@ -6,7 +6,6 @@ import { AuthStack } from '../lib/stacks/auth-stack';
 import { DatabaseStack } from '../lib/stacks/database-stack';
 import { StorageStack } from '../lib/stacks/storage-stack';
 import { ApiStack } from '../lib/stacks/api-stack';
-import { SearchStack } from '../lib/stacks/search-stack';
 import { MigrationStack } from '../lib/stacks/migration-stack';
 import { HostingStack } from '../lib/stacks/hosting-stack';
 
@@ -46,26 +45,12 @@ const apiStack = new ApiStack(app, 'PrimeDeals-Api', {
   smtpSecret: databaseStack.smtpSecret,
   bucket: storageStack.bucket,
   distribution: storageStack.distribution,
-  // OpenSearch endpoint - uncomment after SearchStack is deployed to enable search functionality
-  opensearchEndpoint: cdk.Fn.importValue('SearchCollectionEndpoint'),
 });
 
 // Explicit dependencies
 apiStack.addDependency(authStack);
 apiStack.addDependency(databaseStack);
 apiStack.addDependency(storageStack);
-
-// Spec 9: Search stack
-const searchStack = new SearchStack(app, 'PrimeDeals-Search', {
-  env,
-  lambdaExecutionRoleArn: apiStack.lambdaFunction.role!.roleArn,
-  environment: 'dev',
-  vpc: databaseStack.vpc,
-  lambdaSecurityGroup: apiStack.lambdaSecurityGroup,
-});
-
-// SearchStack depends on ApiStack (needs Lambda role ARN and security group)
-searchStack.addDependency(apiStack);
 
 // Migration stack (temporary - for running database migrations)
 const migrationStack = new MigrationStack(app, 'PrimeDeals-Migration', {
@@ -87,18 +72,10 @@ const hostingStack = new HostingStack(app, 'PrimeDeals-Hosting', {
 // HostingStack depends on ApiStack (needs API URL)
 hostingStack.addDependency(apiStack);
 
-// DEPLOYMENT INSTRUCTIONS:
-// Due to circular dependency (SearchStack needs ApiStack role, ApiStack needs SearchStack endpoint),
-// use this two-stage deployment:
+// DEPLOYMENT:
+//   npx cdk deploy --all --profile prime-deal-auto
 //
-// Stage 1 (completed): Deploy ApiStack → Deploy SearchStack
-//   npx cdk deploy PrimeDeals-Api --profile prime-deal-auto
-//   npx cdk deploy PrimeDeals-Search --profile prime-deal-auto
-//
-// Stage 2 (to enable OpenSearch in Lambda):
-//   1. Uncomment the opensearchEndpoint line above in ApiStack props
-//   2. Redeploy ApiStack: npx cdk deploy PrimeDeals-Api --profile prime-deal-auto
-//   3. Lambda will now have OPENSEARCH_ENDPOINT env var and aoss:* IAM permissions
+// Search: PostgreSQL full-text search (tsvector). OpenSearch Serverless removed to cut costs.
 
 // Future stacks (added in subsequent specs):
 // - PrimeDeals-Monitoring (Spec 12)

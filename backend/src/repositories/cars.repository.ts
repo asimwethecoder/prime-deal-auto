@@ -1,6 +1,40 @@
 import { getPool } from '../lib/database';
 import { Car } from '../types';
-import { SearchFilters, SearchOptions, SearchResult } from './search.repository';
+
+/**
+ * Search filter criteria for full-text search and facets
+ */
+export interface SearchFilters {
+  make?: string;
+  model?: string;
+  variant?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minYear?: number;
+  maxYear?: number;
+  bodyType?: string;
+  fuelType?: 'petrol' | 'diesel' | 'electric' | 'hybrid';
+  transmission?: 'automatic' | 'manual' | 'cvt';
+  condition?: 'excellent' | 'good' | 'fair' | 'poor';
+}
+
+/**
+ * Search options for pagination and sorting
+ */
+export interface SearchOptions {
+  limit: number;
+  offset: number;
+  sortBy?: 'price' | 'year' | 'mileage' | 'relevance';
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Search result with hits and total count
+ */
+export interface SearchResult {
+  hits: any[];
+  total: number;
+}
 
 export interface CarFilters {
   make?: string;
@@ -457,5 +491,52 @@ export class CarRepository {
     });
 
     return facets;
+  }
+
+  /**
+   * Get autocomplete suggestions for a field using PostgreSQL
+   * Returns distinct values matching the prefix, ordered by frequency
+   */
+  async getSuggestions(
+    field: 'make' | 'model' | 'variant',
+    prefix: string,
+    filters?: { make?: string; model?: string }
+  ): Promise<string[]> {
+    const pool = await getPool();
+    const column = field === 'variant' ? 'variant' : field;
+    const conditions: string[] = ["status = 'active'", `${column} IS NOT NULL`, `${column} != ''`];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    if (prefix) {
+      conditions.push(`${column} ILIKE $${paramIndex}`);
+      params.push(`${prefix}%`);
+      paramIndex++;
+    }
+
+    if (filters?.make) {
+      conditions.push(`make = $${paramIndex}`);
+      params.push(filters.make);
+      paramIndex++;
+    }
+
+    if (filters?.model) {
+      conditions.push(`model = $${paramIndex}`);
+      params.push(filters.model);
+      paramIndex++;
+    }
+
+    const whereClause = conditions.join(' AND ');
+    const result = await pool.query(
+      `SELECT ${column} as value, COUNT(*) as count
+       FROM cars
+       WHERE ${whereClause}
+       GROUP BY ${column}
+       ORDER BY count DESC, ${column} ASC
+       LIMIT 10`,
+      params
+    );
+
+    return result.rows.map((row: { value: string }) => row.value);
   }
 }

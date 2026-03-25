@@ -27,9 +27,6 @@ export interface ApiStackProps extends cdk.StackProps {
   // From StorageStack
   bucket: s3.IBucket;
   distribution?: cloudfront.IDistribution; // Optional until CloudFront approved
-
-  // From SearchStack (optional - use CloudFormation import if not provided)
-  opensearchEndpoint?: string;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -61,14 +58,6 @@ export class ApiStack extends cdk.Stack {
       'Allow HTTPS outbound for Secrets Manager and S3'
     );
 
-    // Allow inbound HTTPS from Lambda to VPC endpoints (OpenSearch Serverless VPC endpoint)
-    // The VPC endpoint uses the same security group, so Lambda needs to reach itself on 443
-    this.lambdaSecurityGroup.addIngressRule(
-      this.lambdaSecurityGroup,
-      ec2.Port.tcp(443),
-      'Allow HTTPS inbound from Lambda for OpenSearch VPC endpoint'
-    );
-
     // Ingress rule on RDS Proxy SG must be created in this stack to avoid circular dependency
     // (DatabaseStack -> ApiStack). Using L1 CfnSecurityGroupIngress so the resource lives in ApiStack.
     new ec2.CfnSecurityGroupIngress(this, 'AllowLambdaToRdsProxy', {
@@ -87,7 +76,7 @@ export class ApiStack extends cdk.Stack {
       entry: path.join(__dirname, '../../../backend/src/lambda.ts'),
       handler: 'handler',
       memorySize: 1024,
-      timeout: cdk.Duration.seconds(120), // 120s for reindex (delete/create index + bulk index)
+      timeout: cdk.Duration.seconds(30),
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [this.lambdaSecurityGroup],
@@ -101,8 +90,6 @@ export class ApiStack extends cdk.Stack {
         ...(props.distribution && { CLOUDFRONT_DOMAIN: props.distribution.distributionDomainName }),
         // CORS: Allow all origins since we have multiple frontends (localhost, Amplify)
         FRONTEND_URL: '*',
-        // OpenSearch endpoint - import from SearchStack export if available
-        ...(props.opensearchEndpoint && { OPENSEARCH_ENDPOINT: props.opensearchEndpoint }),
       },
       bundling: {
         minify: true,
@@ -130,21 +117,6 @@ export class ApiStack extends cdk.Stack {
         ],
       })
     );
-
-    // Grant OpenSearch Serverless permissions if endpoint provided
-    if (props.opensearchEndpoint) {
-      const collectionName = 'primedeals-cars';
-      this.lambdaFunction.addToRolePolicy(
-        new cdk.aws_iam.PolicyStatement({
-          effect: cdk.aws_iam.Effect.ALLOW,
-          actions: ['aoss:*'],
-          resources: [
-            `arn:aws:aoss:${this.region}:${this.account}:collection/*`,
-            `arn:aws:aoss:${this.region}:${this.account}:index/${collectionName}/*`,
-          ],
-        })
-      );
-    }
 
     // ========================================
     // VPC Proxy Lambda Pattern for Chat
@@ -469,6 +441,10 @@ export class ApiStack extends cdk.Stack {
     ]);
     facetsMethodCfn.addPropertyOverride('Integration.CacheNamespace', facetsResource.resourceId);
 
+    // POST /search/intent — AI-powered natural language query parsing (public, no caching)
+    const intentResource = searchResource.addResource('intent');
+    intentResource.addMethod('POST', lambdaIntegration);
+
     // GET /search/suggestions — autocomplete (public, cached 300s)
     const suggestionsResource = searchResource.addResource('suggestions');
     const suggestionsMethod = suggestionsResource.addMethod('GET', lambdaIntegration, {
@@ -633,11 +609,8 @@ export class ApiStack extends cdk.Stack {
           'Resource::*',
           'Resource::<StorageBucket*>/*',
           'Resource::<CarImagesBucket930996DC.Arn>/*',
-          'Action::aoss:*',
-          'Resource::arn:aws:aoss:us-east-1:141814481613:collection/*',
-          'Resource::arn:aws:aoss:us-east-1:141814481613:index/primedeals-cars/*',
         ],
-        reason: 'S3 bucket permissions use wildcard actions for object operations - required for image upload/download. OpenSearch permissions use wildcard for collection and index access - required for search operations. Bedrock permissions scoped to specific Claude Sonnet 4 model ARN.',
+        reason: 'S3 bucket permissions use wildcard actions for object operations - required for image upload/download. Bedrock permissions scoped to specific model ARN.',
       },
       {
         id: 'AwsSolutions-L1',

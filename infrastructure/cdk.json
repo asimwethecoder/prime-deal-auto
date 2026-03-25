@@ -1,5 +1,6 @@
 {
   "app": "npx ts-node --prefer-ts-exts bin/app.ts",
+  "profile": "prime-deal-auto",
   "watch": {
     "include": ["**"],
     "exclude": [

@@ -1,12 +1,8 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { CarService, ListCarsInput, CreateCarInput } from '../services/cars.service';
-import { SearchService } from '../services/search.service';
-import { SearchRepository } from '../repositories/search.repository';
-import { CarRepository } from '../repositories/cars.repository';
 import { success, error, paginated } from '../lib/response';
 
 const carService = new CarService();
-const searchService = new SearchService(new SearchRepository(), new CarRepository());
 
 const CONDITION_VALUES = ['excellent', 'good', 'fair', 'poor'];
 const TRANSMISSION_VALUES = ['automatic', 'manual', 'cvt'];
@@ -147,16 +143,6 @@ export async function handleCreateCar(
     };
 
     const car = await carService.createCar(input);
-    if (car.status === 'active') {
-      try {
-        await searchService.indexCar(car as unknown as Record<string, unknown>);
-      } catch (e) {
-        console.warn('Search index update failed after create', {
-          carId: car.id,
-          error: e instanceof Error ? e.message : e
-        });
-      }
-    }
     return success(car, 201);
   } catch (err) {
     console.error('Error creating car:', {
@@ -291,26 +277,6 @@ export async function handleUpdateCar(
       return error('Car not found', 'NOT_FOUND', 404);
     }
 
-    if (car.status === 'active') {
-      try {
-        await searchService.indexCar(car as unknown as Record<string, unknown>);
-      } catch (e) {
-        console.warn('Search index update failed after update', {
-          carId: car.id,
-          error: e instanceof Error ? e.message : e
-        });
-      }
-    } else {
-      try {
-        await searchService.removeCarFromIndex(car.id);
-      } catch (e) {
-        console.warn('Search index removal failed after update', {
-          carId: car.id,
-          error: e instanceof Error ? e.message : e
-        });
-      }
-    }
-
     return success(car);
   } catch (err) {
     console.error('Error updating car:', err);
@@ -331,13 +297,6 @@ export async function handleDeleteCar(
     }
 
     const deleted = await carService.deleteCar(carId);
-
-    // Keep search index in sync: remove from OpenSearch so public /cars page doesn't show deleted car (best-effort)
-    try {
-      await searchService.removeCarFromIndex(carId);
-    } catch (err) {
-      console.warn('Search index removal failed after delete', { carId, error: err instanceof Error ? err.message : err });
-    }
 
     // Return 200 even if already deleted (idempotent)
     return success({ deleted, id: carId });
