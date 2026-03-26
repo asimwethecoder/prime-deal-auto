@@ -5,6 +5,7 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import { ApiStack } from '../lib/stacks/api-stack';
@@ -26,9 +27,10 @@ describe('ApiStack', () => {
       ],
     });
 
-    const proxySecurityGroup = new ec2.SecurityGroup(mockStack, 'ProxySG', {
+    const dbSecurityGroup = new ec2.SecurityGroup(mockStack, 'AuroraDbSG', {
       vpc,
-      description: 'Mock RDS Proxy security group',
+      description: 'Mock Aurora DB security group',
+      allowAllOutbound: false,
     });
 
     const userPool = new cognito.UserPool(mockStack, 'UserPool');
@@ -41,7 +43,6 @@ describe('ApiStack', () => {
       },
     });
 
-    // Create a mock Aurora cluster for the proxy
     const cluster = new rds.DatabaseCluster(mockStack, 'Cluster', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
         version: rds.AuroraPostgresEngineVersion.VER_15_15,
@@ -49,23 +50,21 @@ describe('ApiStack', () => {
       writer: rds.ClusterInstance.serverlessV2('writer'),
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-    });
-
-    const rdsProxy = new rds.DatabaseProxy(mockStack, 'Proxy', {
-      proxyTarget: rds.ProxyTarget.fromCluster(cluster),
-      secrets: [cluster.secret!],
-      vpc,
+      securityGroups: [dbSecurityGroup],
     });
 
     const dbSecret = cluster.secret!;
+    const smtpSecret = new secretsmanager.Secret(mockStack, 'SmtpSecret', {
+      secretName: 'test/smtp',
+    });
 
-    // Create the ApiStack
     const stack = new ApiStack(app, 'TestApiStack', {
       userPool,
       vpc,
-      proxySecurityGroupId: proxySecurityGroup.securityGroupId,
-      rdsProxy,
+      auroraClusterEndpoint: cluster.clusterEndpoint.hostname,
+      dbSecurityGroupId: dbSecurityGroup.securityGroupId,
       dbSecret,
+      smtpSecret,
       bucket,
       distribution,
     });
@@ -128,21 +127,26 @@ describe('ApiStack', () => {
       });
     });
 
-    test('Lambda has 120 second timeout', () => {
+    test('ApiHandler has 30 second timeout', () => {
       template.hasResourceProperties('AWS::Lambda::Function', {
-        Timeout: 120,
+        MemorySize: 1024,
+        Timeout: 30,
       });
     });
 
-    test('Lambda has required environment variables', () => {
+    test('ApiHandler has required environment variables', () => {
       template.hasResourceProperties('AWS::Lambda::Function', {
+        MemorySize: 1024,
+        Timeout: 30,
         Environment: {
           Variables: {
             DB_HOST: Match.anyValue(),
             DB_NAME: 'primedealauto',
             SECRET_ARN: Match.anyValue(),
+            SMTP_SECRET_ARN: Match.anyValue(),
             S3_BUCKET: Match.anyValue(),
-            CLOUDFRONT_URL: Match.anyValue(),
+            CLOUDFRONT_DOMAIN: Match.anyValue(),
+            FRONTEND_URL: '*',
           },
         },
       });

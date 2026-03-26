@@ -1,17 +1,17 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as rds from 'aws-cdk-lib/aws-rds';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
 import * as path from 'path';
+import { afterBundlingCopyRdsCaBundle } from '../bundle-rds-ca';
 
 export interface MigrationStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
-  proxySecurityGroupId: string;
-  rdsProxy: rds.IDatabaseProxy;
+  auroraClusterEndpoint: string;
+  dbSecurityGroupId: string;
   dbSecret: secretsmanager.ISecret;
 }
 
@@ -21,38 +21,39 @@ export class MigrationStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: MigrationStackProps) {
     super(scope, id, props);
 
-    // Lambda security group
     const lambdaSecurityGroup = new ec2.SecurityGroup(this, 'MigrationLambdaSG', {
       vpc: props.vpc,
       description: 'Security group for migration Lambda',
       allowAllOutbound: false,
     });
 
-    // Allow Lambda to connect to RDS Proxy
     lambdaSecurityGroup.addEgressRule(
-      ec2.Peer.securityGroupId(props.proxySecurityGroupId),
+      ec2.Peer.securityGroupId(props.dbSecurityGroupId),
       ec2.Port.tcp(5432),
-      'Allow outbound to RDS Proxy'
+      'Allow outbound to Aurora'
     );
 
-    // Allow HTTPS for Secrets Manager
     lambdaSecurityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(443),
       'Allow HTTPS outbound for Secrets Manager'
     );
 
-    // Ingress rule on RDS Proxy SG
-    new ec2.CfnSecurityGroupIngress(this, 'AllowMigrationLambdaToRdsProxy', {
-      groupId: props.proxySecurityGroupId,
+    const allowMigrationToAurora = new ec2.CfnSecurityGroupIngress(this, 'AllowMigrationLambdaToAurora', {
+      groupId: props.dbSecurityGroupId,
       sourceSecurityGroupId: lambdaSecurityGroup.securityGroupId,
       ipProtocol: 'tcp',
       fromPort: 5432,
       toPort: 5432,
-      description: 'Allow migration Lambda to connect to RDS Proxy',
+      description: 'Allow migration Lambda to connect to Aurora',
     });
+    NagSuppressions.addResourceSuppressions(allowMigrationToAurora, [
+      {
+        id: 'AwsSolutions-EC23',
+        reason: 'Ingress is scoped to the migration Lambda security group only, not open to the internet',
+      },
+    ]);
 
-    // Migration Lambda function
     this.migrationFunction = new NodejsFunction(this, 'MigrationHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
       architecture: lambda.Architecture.ARM_64,
@@ -64,16 +65,27 @@ export class MigrationStack extends cdk.Stack {
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [lambdaSecurityGroup],
       environment: {
-        DB_HOST: props.rdsProxy.endpoint,
+        DB_HOST: props.auroraClusterEndpoint,
         DB_NAME: 'primedealauto',
         SECRET_ARN: props.dbSecret.secretArn,
       },
+      bundling: {
+        commandHooks: {
+          beforeBundling(): string[] {
+            return [];
+          },
+          beforeInstall(): string[] {
+            return [];
+          },
+          afterBundling(_inputDir: string, outputDir: string): string[] {
+            return afterBundlingCopyRdsCaBundle(outputDir);
+          },
+        },
+      },
     });
 
-    // Grant permissions
     props.dbSecret.grantRead(this.migrationFunction);
 
-    // Output
     new cdk.CfnOutput(this, 'MigrationFunctionName', {
       value: this.migrationFunction.functionName,
       description: 'Migration Lambda function name',
@@ -84,7 +96,6 @@ export class MigrationStack extends cdk.Stack {
       description: 'Migration Lambda function ARN',
     });
 
-    // cdk-nag suppressions
     NagSuppressions.addResourceSuppressions(this.migrationFunction, [
       {
         id: 'AwsSolutions-IAM4',

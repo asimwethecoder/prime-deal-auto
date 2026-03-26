@@ -39,8 +39,8 @@ const apiStack = new ApiStack(app, 'PrimeDeals-Api', {
   env,
   userPool: authStack.userPool,
   vpc: databaseStack.vpc,
-  proxySecurityGroupId: cdk.Fn.importValue(`${databaseStack.stackName}-ProxySecurityGroupId`),
-  rdsProxy: databaseStack.proxy,
+  auroraClusterEndpoint: databaseStack.clusterEndpoint,
+  dbSecurityGroupId: cdk.Fn.importValue(`${databaseStack.stackName}-DbSecurityGroupId`),
   dbSecret: databaseStack.secret,
   smtpSecret: databaseStack.smtpSecret,
   bucket: storageStack.bucket,
@@ -56,8 +56,8 @@ apiStack.addDependency(storageStack);
 const migrationStack = new MigrationStack(app, 'PrimeDeals-Migration', {
   env,
   vpc: databaseStack.vpc,
-  proxySecurityGroupId: cdk.Fn.importValue(`${databaseStack.stackName}-ProxySecurityGroupId`),
-  rdsProxy: databaseStack.proxy,
+  auroraClusterEndpoint: databaseStack.clusterEndpoint,
+  dbSecurityGroupId: cdk.Fn.importValue(`${databaseStack.stackName}-DbSecurityGroupId`),
   dbSecret: databaseStack.secret,
 });
 
@@ -74,6 +74,13 @@ hostingStack.addDependency(apiStack);
 
 // DEPLOYMENT:
 //   npx cdk deploy --all --profile prime-deal-auto
+//
+// Cross-stack exports (Fn::ImportValue): CDK deploys dependency stacks first. If you remove an
+// export from Database while Api/Migration still import it, the update fails. Deploy consumers
+// first with --exclusively, then the producer, e.g. after removing shared resources:
+//   npx cdk deploy PrimeDeals-Api --exclusively --require-approval never
+//   npx cdk deploy PrimeDeals-Migration --exclusively --require-approval never
+//   npx cdk deploy PrimeDeals-Database --exclusively --require-approval never
 //
 // Search: PostgreSQL full-text search (tsvector). OpenSearch Serverless removed to cut costs.
 

@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { Pool, PoolConfig } from 'pg';
 import {
   SecretsManagerClient,
@@ -57,14 +59,21 @@ export async function getPool(): Promise<Pool> {
   try {
     const secret = await getSecret();
 
+    // Direct Aurora TLS uses Amazon RDS CAs; Lambda's default trust store alone can fail
+    // (UNABLE_TO_GET_ISSUER_CERT_LOCALLY). Bundle global-bundle.pem next to the handler in CDK.
+    const caPath = path.join(__dirname, 'global-bundle.pem');
+    const ssl: PoolConfig['ssl'] = fs.existsSync(caPath)
+      ? { rejectUnauthorized: true, ca: fs.readFileSync(caPath, 'utf8') }
+      : { rejectUnauthorized: true };
+
     const config: PoolConfig = {
-      host: process.env.DB_HOST, // RDS Proxy endpoint
+      host: process.env.DB_HOST,
       port: 5432,
       database: process.env.DB_NAME || 'primedealauto',
       user: secret.username,
       password: secret.password,
-      max: 1, // RDS Proxy handles server-side pooling
-      ssl: { rejectUnauthorized: true },
+      max: 1,
+      ssl,
       keepAlive: true,
       connectionTimeoutMillis: 5000,
     };

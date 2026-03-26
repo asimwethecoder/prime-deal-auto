@@ -4,7 +4,6 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
@@ -12,6 +11,7 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
 import * as path from 'path';
+import { afterBundlingCopyRdsCaBundle } from '../bundle-rds-ca';
 
 export interface ApiStackProps extends cdk.StackProps {
   // From AuthStack
@@ -19,8 +19,8 @@ export interface ApiStackProps extends cdk.StackProps {
 
   // From DatabaseStack
   vpc: ec2.IVpc;
-  proxySecurityGroupId: string; // Pass ID as string to avoid cross-stack reference
-  rdsProxy: rds.IDatabaseProxy;
+  auroraClusterEndpoint: string; // Aurora writer hostname for DB_HOST
+  dbSecurityGroupId: string; // Aurora DB security group ID for direct connectivity
   dbSecret: secretsmanager.ISecret;
   smtpSecret: secretsmanager.ISecret;
 
@@ -37,18 +37,17 @@ export class ApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
-    // Lambda security group — allows outbound to RDS Proxy and HTTPS
+    // Lambda security group — allows outbound to Aurora on 5432 and HTTPS
     this.lambdaSecurityGroup = new ec2.SecurityGroup(this, 'LambdaSG', {
       vpc: props.vpc,
-      description: 'Security group for API Lambda - allows outbound to RDS Proxy and HTTPS',
+      description: 'Security group for API Lambda - outbound to Aurora :5432 and HTTPS',
       allowAllOutbound: false,
     });
 
-    // Allow Lambda to connect to RDS Proxy on port 5432
     this.lambdaSecurityGroup.addEgressRule(
-      ec2.Peer.securityGroupId(props.proxySecurityGroupId),
+      ec2.Peer.securityGroupId(props.dbSecurityGroupId),
       ec2.Port.tcp(5432),
-      'Allow outbound to RDS Proxy'
+      'Allow outbound to Aurora'
     );
 
     // Allow Lambda to connect to HTTPS endpoints (Secrets Manager VPC endpoint and S3)
@@ -58,16 +57,21 @@ export class ApiStack extends cdk.Stack {
       'Allow HTTPS outbound for Secrets Manager and S3'
     );
 
-    // Ingress rule on RDS Proxy SG must be created in this stack to avoid circular dependency
-    // (DatabaseStack -> ApiStack). Using L1 CfnSecurityGroupIngress so the resource lives in ApiStack.
-    new ec2.CfnSecurityGroupIngress(this, 'AllowLambdaToRdsProxy', {
-      groupId: props.proxySecurityGroupId,
+    // Ingress on Aurora DB SG — lives in ApiStack to avoid DatabaseStack ↔ ApiStack circular dependency
+    const allowLambdaToAurora = new ec2.CfnSecurityGroupIngress(this, 'AllowLambdaToAurora', {
+      groupId: props.dbSecurityGroupId,
       sourceSecurityGroupId: this.lambdaSecurityGroup.securityGroupId,
       ipProtocol: 'tcp',
       fromPort: 5432,
       toPort: 5432,
-      description: 'Allow Lambda to connect to RDS Proxy',
+      description: 'Allow Lambda to connect to Aurora directly',
     });
+    NagSuppressions.addResourceSuppressions(allowLambdaToAurora, [
+      {
+        id: 'AwsSolutions-EC23',
+        reason: 'Ingress is scoped to the Lambda security group only, not open to the internet',
+      },
+    ]);
 
     // Lambda function — single handler with path-based routing
     this.lambdaFunction = new NodejsFunction(this, 'ApiHandler', {
@@ -81,7 +85,7 @@ export class ApiStack extends cdk.Stack {
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [this.lambdaSecurityGroup],
       environment: {
-        DB_HOST: props.rdsProxy.endpoint,
+        DB_HOST: props.auroraClusterEndpoint,
         DB_NAME: 'primedealauto',
         SECRET_ARN: props.dbSecret.secretArn,
         SMTP_SECRET_ARN: props.smtpSecret.secretArn,
@@ -99,6 +103,17 @@ export class ApiStack extends cdk.Stack {
           '@aws-sdk/client-s3',
           '@aws-sdk/s3-request-presigner',
         ],
+        commandHooks: {
+          beforeBundling(): string[] {
+            return [];
+          },
+          beforeInstall(): string[] {
+            return [];
+          },
+          afterBundling(_inputDir: string, outputDir: string): string[] {
+            return afterBundlingCopyRdsCaBundle(outputDir);
+          },
+        },
       },
     });
 
@@ -139,7 +154,7 @@ export class ApiStack extends cdk.Stack {
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [this.lambdaSecurityGroup],
       environment: {
-        DB_HOST: props.rdsProxy.endpoint,
+        DB_HOST: props.auroraClusterEndpoint,
         DB_NAME: 'primedealauto',
         SECRET_ARN: props.dbSecret.secretArn,
       },
@@ -147,6 +162,17 @@ export class ApiStack extends cdk.Stack {
         minify: true,
         sourceMap: true,
         externalModules: ['@aws-sdk/client-secrets-manager'],
+        commandHooks: {
+          beforeBundling(): string[] {
+            return [];
+          },
+          beforeInstall(): string[] {
+            return [];
+          },
+          afterBundling(_inputDir: string, outputDir: string): string[] {
+            return afterBundlingCopyRdsCaBundle(outputDir);
+          },
+        },
       },
     });
 
