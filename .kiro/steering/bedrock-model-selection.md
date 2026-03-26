@@ -1,19 +1,19 @@
 # Bedrock Model Selection Guide
 
-## Current Model: Amazon Nova Pro
+## Current Model: Amazon Nova Lite
 
-Prime Deal Auto uses **Amazon Nova Pro** (`amazon.nova-pro-v1:0`) for the AI chat assistant.
+Prime Deal Auto uses **Amazon Nova Lite** (`amazon.nova-lite-v1:0`) for the AI chat assistant.
 
-**Reason:** Claude Sonnet 4 requires Anthropic use case form submission which is pending approval. Nova Pro has no access restrictions and is immediately available.
+**Reason:** Nova Pro is not available. Claude Sonnet 4 requires Anthropic use case form submission which is pending approval. Nova Lite is cost-effective, supports tool use via Converse API, and is immediately available.
 
-## Nova Pro Specifications
+## Nova Lite Specifications
 
 | Specification | Value |
 |---------------|-------|
-| Model ID | `amazon.nova-pro-v1:0` |
+| Model ID | `amazon.nova-lite-v1:0` |
 | Context Window | 300,000 tokens (~225,000 words) |
 | Max Output Tokens | 5,000 tokens |
-| Throughput | ~90 tokens/second |
+| Throughput | ~150 tokens/second |
 | Modalities | Text, images, video, documents |
 | Tool Use | Supported via Converse API |
 | Streaming | Supported |
@@ -23,15 +23,15 @@ Prime Deal Auto uses **Amazon Nova Pro** (`amazon.nova-pro-v1:0`) for the AI cha
 
 ### Quality & Capabilities
 
-| Capability | Claude Sonnet 4 | Amazon Nova Pro |
-|------------|-----------------|-----------------|
-| Tool/Function Calling | Excellent - industry-leading | Good - functional |
+| Capability | Claude Sonnet 4 | Amazon Nova Lite |
+|------------|-----------------|------------------|
+| Tool/Function Calling | Excellent - industry-leading | Functional - works with greedy decoding |
 | Multi-turn Conversation | Superior context retention | Good with proper history management |
-| Reasoning Quality | Best-in-class | Good for straightforward tasks |
+| Reasoning Quality | Best-in-class | Adequate for straightforward tasks |
 | Access Restrictions | Requires use case form | None - immediately available |
 | Response Quality | Natural, conversational | Clear, structured |
 | Context Window | 200K tokens | 300K tokens |
-| Throughput | ~42 tok/s | ~90 tok/s |
+| Throughput | ~42 tok/s | ~150 tok/s |
 
 ### Cost Comparison (per 1M tokens, us-east-1)
 
@@ -42,7 +42,7 @@ Prime Deal Auto uses **Amazon Nova Pro** (`amazon.nova-pro-v1:0`) for the AI cha
 | Claude 3.5 Haiku | $0.80 | $4.00 | $4.80 |
 | Amazon Nova Lite | $0.06 | $0.24 | $0.30 |
 
-**Nova Pro is ~4.5x cheaper than Claude Sonnet 4**
+**Nova Lite is ~60x cheaper than Claude Sonnet 4**
 
 ### Cost Projection for Prime Deal Auto
 
@@ -55,20 +55,22 @@ Prime Deal Auto uses **Amazon Nova Pro** (`amazon.nova-pro-v1:0`) for the AI cha
 
 | Model | Input Cost | Output Cost | Total/Month |
 |-------|------------|-------------|-------------|
+| Amazon Nova Lite | $1.35 | $1.44 | **$2.79** |
 | Amazon Nova Pro | $18.00 | $19.20 | **$37.20** |
 | Claude Sonnet 4 | $67.50 | $90.00 | **$157.50** |
 
-**Annual Savings with Nova Pro:** ~$1,444/year
+**Annual Savings with Nova Lite vs Nova Pro:** ~$413/year
+**Annual Savings with Nova Lite vs Claude Sonnet 4:** ~$1,857/year
 
 ---
 
-## Nova Pro Best Practices (from AWS Documentation)
+## Nova Lite Best Practices (from AWS Documentation)
 
 ### 1. Conversation Memory & Context Retention
 
 **CRITICAL: Preventing "Forgetting" Previous Messages**
 
-Nova Pro does NOT have built-in session memory. You MUST:
+Nova Lite does NOT have built-in session memory. You MUST:
 
 1. **Load conversation history before each request**: Always include previous messages in the `messages` array
 2. **Persist messages to database**: Store both user and assistant messages after each turn
@@ -108,13 +110,13 @@ Guidelines for system prompt:
 
 ### 3. Tool Use Best Practices
 
-**For reliable tool calling with Nova Pro:**
+**For reliable tool calling with Nova Lite:**
 
 ```typescript
 // Use greedy decoding for more consistent tool calls
 inferenceConfig: {
   maxTokens: 1024,
-  temperature: 0,  // Greedy decoding for tool use
+  temperature: 0,  // Greedy decoding — critical for Lite's tool use reliability
 }
 
 // Pass topK via additionalModelRequestFields
@@ -207,7 +209,7 @@ For chat: System prompt → Conversation history → Current user message
 
 ```typescript
 // backend/src/lib/bedrock.ts
-const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-pro-v1:0';
+const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-lite-v1:0';
 
 const inferenceConfig = {
   maxTokens: 1024,
@@ -236,7 +238,7 @@ chatLambda.addToRolePolicy(
     effect: iam.Effect.ALLOW,
     actions: ['bedrock:InvokeModel'],
     resources: [
-      `arn:aws:bedrock:${this.region}::foundation-model/amazon.nova-pro-v1:0`,
+      `arn:aws:bedrock:${this.region}::foundation-model/amazon.nova-lite-v1:0`,
     ],
   })
 );
@@ -245,7 +247,7 @@ chatLambda.addToRolePolicy(
 ### Environment Variables
 
 ```bash
-BEDROCK_MODEL_ID=amazon.nova-pro-v1:0
+BEDROCK_MODEL_ID=amazon.nova-lite-v1:0
 BEDROCK_REGION=us-east-1
 ```
 
@@ -267,13 +269,20 @@ Use `temperature: 0` when expecting tool calls to reduce retries.
 
 ---
 
-## Future: Upgrade to Claude Sonnet 4
+## Future: Upgrade Path
 
-When Anthropic use case form is approved, switch to Claude for better quality:
+When better models become available, switch by updating three things:
 
-1. Update `BEDROCK_MODEL_ID` environment variable
-2. Update IAM permissions to Claude model ARN
+1. Update `BEDROCK_MODEL_ID` environment variable in api-stack.ts
+2. Update IAM permissions to the new model ARN in api-stack.ts
 3. Redeploy API stack
+
+### Option A: Upgrade to Nova Pro (if access is restored)
+- Model ID: `amazon.nova-pro-v1:0`
+- Better reasoning quality, same API interface
+- ~13x more expensive than Lite
+
+### Option B: Upgrade to Claude Sonnet 4 (when approved)
 
 ### Steps to Request Claude Access
 

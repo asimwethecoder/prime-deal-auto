@@ -280,7 +280,7 @@ export async function handleIntent(
     }
 
     const client = getBedrockClient();
-    const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-pro-v1:0';
+    const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-lite-v1:0';
 
     const command = new ConverseCommand({
       modelId,

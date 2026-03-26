@@ -14,7 +14,7 @@ process.env.FRONTEND_URL = 'http://localhost:3000';
 process.env.S3_BUCKET = 'test-bucket';
 process.env.CLOUDFRONT_URL = 'https://test.cloudfront.net';
 process.env.OPENSEARCH_ENDPOINT = 'https://test.opensearch.amazonaws.com';
-process.env.BEDROCK_MODEL_ID = 'amazon.nova-pro-v1:0';
+process.env.BEDROCK_MODEL_ID = 'amazon.nova-lite-v1:0';
 
 // In-memory test data store
 const testDataStore = {

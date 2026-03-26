@@ -58,7 +58,7 @@ OPENSEARCH_ENDPOINT=               # From SearchStack
 OPENSEARCH_INDEX=cars
 
 # AI
-BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
+BEDROCK_MODEL_ID=amazon.nova-lite-v1:0
 BEDROCK_REGION=us-east-1
 
 # Email

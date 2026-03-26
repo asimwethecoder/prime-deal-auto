@@ -7,7 +7,7 @@ inclusion: always
 ## API
 - Use Converse API (NOT InvokeModel) — unified interface across models, native tool use support
 - Requires `bedrock:InvokeModel` IAM permission
-- Model: `anthropic.claude-sonnet-4-20250514-v1:0`
+- Model: `amazon.nova-lite-v1:0`
 - Region: `us-east-1`
 - Use `ConverseStream` for streaming responses to improve perceived latency (optional, Phase 3 polish)
 
@@ -19,7 +19,7 @@ const client = new BedrockRuntimeClient({ region: 'us-east-1' });
 // Initialize client OUTSIDE handler for reuse across warm invocations
 
 const response = await client.send(new ConverseCommand({
-  modelId: 'anthropic.claude-sonnet-4-20250514-v1:0',
+  modelId: 'amazon.nova-lite-v1:0',
   messages: conversationHistory,
   system: [{ text: systemPrompt }],
   toolConfig: { tools: toolDefinitions },

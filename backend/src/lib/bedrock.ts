@@ -167,10 +167,10 @@ export async function converse(params: {
 }): Promise<ConverseResponse> {
   const client = getBedrockClient();
   
-  // Use Amazon Nova Pro - no access restrictions, good tool use support
-  // Claude Sonnet 4 requires Anthropic use case form submission (not yet approved)
+  // Use Amazon Nova Lite - cost-effective, supports tool use via Converse API
+  // Nova Pro not available; Claude Sonnet 4 requires Anthropic use case form (not yet approved)
   // See .kiro/steering/bedrock-model-selection.md for rationale
-  const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-pro-v1:0';
+  const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-lite-v1:0';
 
   const input: ConverseCommandInput = {
     modelId,

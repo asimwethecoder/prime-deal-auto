@@ -128,7 +128,7 @@ export class ApiStack extends cdk.Stack {
         effect: iam.Effect.ALLOW,
         actions: ['bedrock:InvokeModel'],
         resources: [
-          `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0`,
+          `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-lite-v1:0`,
         ],
       })
     );
@@ -211,10 +211,9 @@ export class ApiStack extends cdk.Stack {
         VPC_PROXY_FUNCTION_NAME: vpcProxyLambda.functionName,
         // CORS: Allow all origins since we have multiple frontends (localhost, Amplify)
         FRONTEND_URL: '*',
-        // Using Amazon Nova Pro for best quality
-        // If hitting daily token limits, request quota increase via AWS Support
-        // Claude Sonnet 4 requires Anthropic use case form (not yet approved)
-        BEDROCK_MODEL_ID: 'amazon.nova-pro-v1:0',
+        // Using Amazon Nova Lite for cost-effective AI chat
+        // Nova Pro not available; Claude Sonnet 4 requires Anthropic use case form (not yet approved)
+        BEDROCK_MODEL_ID: 'amazon.nova-lite-v1:0',
         BEDROCK_REGION: 'us-east-1',
       },
       bundling: {
@@ -252,8 +251,8 @@ export class ApiStack extends cdk.Stack {
         effect: iam.Effect.ALLOW,
         actions: ['bedrock:InvokeModel'],
         resources: [
-          // Amazon Nova Pro (best quality)
-          `arn:aws:bedrock:${this.region}::foundation-model/amazon.nova-pro-v1:0`,
+          // Amazon Nova Lite (cost-effective, tool use supported)
+          `arn:aws:bedrock:${this.region}::foundation-model/amazon.nova-lite-v1:0`,
         ],
       })
     );
