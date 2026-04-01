@@ -17,19 +17,21 @@ describe('StorageStack', () => {
 
   // Property 1: S3 Bucket Security Configuration
   describe('S3 Bucket Security', () => {
-    test('S3 bucket has versioning enabled', () => {
-      template.hasResourceProperties('AWS::S3::Bucket', {
-        VersioningConfiguration: { Status: 'Enabled' },
-      });
+    test('S3 bucket has versioning disabled when CloudFront is off', () => {
+      // Versioning intentionally disabled to minimize storage costs
+      const buckets = template.findResources('AWS::S3::Bucket');
+      const bucket = Object.values(buckets)[0];
+      expect(bucket.Properties.VersioningConfiguration).toBeUndefined();
     });
 
-    test('S3 bucket blocks all public access', () => {
+    test('S3 bucket allows public access when CloudFront is off', () => {
+      // Public read enabled for direct S3 URLs as fallback when CloudFront is disabled
       template.hasResourceProperties('AWS::S3::Bucket', {
         PublicAccessBlockConfiguration: {
-          BlockPublicAcls: true,
-          BlockPublicPolicy: true,
-          IgnorePublicAcls: true,
-          RestrictPublicBuckets: true,
+          BlockPublicAcls: false,
+          BlockPublicPolicy: false,
+          IgnorePublicAcls: false,
+          RestrictPublicBuckets: false,
         },
       });
     });

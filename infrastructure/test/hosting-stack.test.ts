@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 import { HostingStack } from '../lib/stacks/hosting-stack';
 
 describe('HostingStack', () => {
@@ -48,8 +48,15 @@ describe('HostingStack', () => {
 
   test('creates IAM service role for Amplify', () => {
     template.hasResourceProperties('AWS::IAM::Role', {
-      AssumedBy: {
-        Service: 'amplify.amazonaws.com',
+      AssumeRolePolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Effect: 'Allow',
+            Principal: {
+              Service: 'amplify.amazonaws.com',
+            },
+          }),
+        ]),
       },
     });
   });
@@ -90,7 +97,7 @@ describe('HostingStack', () => {
   test('has build spec configured', () => {
     template.hasResourceProperties('AWS::Amplify::App', {
       BuildSpec: {
-        'Fn::Sub': cdk.Match.stringLikeRegexp('npm run build'),
+        'Fn::Sub': Match.stringLikeRegexp('npm run build'),
       },
     });
   });

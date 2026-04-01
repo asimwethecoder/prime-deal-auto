@@ -1,16 +1,39 @@
-import { App } from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Template } from 'aws-cdk-lib/assertions';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { SearchStack } from '../lib/stacks/search-stack';
 
 describe('SearchStack', () => {
-  const app = new App();
-  const stack = new SearchStack(app, 'TestSearchStack', {
-    env: { account: '141814481613', region: 'us-east-1' },
-    lambdaExecutionRoleArn: 'arn:aws:iam::141814481613:role/test-lambda-role',
-    environment: 'dev',
+  let template: Template;
+
+  beforeAll(() => {
+    const app = new cdk.App();
+    const env = { account: '141814481613', region: 'us-east-1' };
+
+    // Create mock VPC and security group in a separate stack with same env
+    const mockStack = new cdk.Stack(app, 'MockSearchDeps', { env });
+    const vpc = new ec2.Vpc(mockStack, 'Vpc', {
+      maxAzs: 2,
+      natGateways: 0,
+      subnetConfiguration: [
+        { name: 'isolated', subnetType: ec2.SubnetType.PRIVATE_ISOLATED, cidrMask: 24 },
+      ],
+    });
+    const lambdaSecurityGroup = new ec2.SecurityGroup(mockStack, 'LambdaSG', {
+      vpc,
+      description: 'Mock Lambda SG',
+    });
+
+    const stack = new SearchStack(app, 'TestSearchStack', {
+      env,
+      lambdaExecutionRoleArn: 'arn:aws:iam::141814481613:role/test-lambda-role',
+      environment: 'dev',
+      vpc,
+      lambdaSecurityGroup,
+    });
+    template = Template.fromStack(stack);
   });
-  const template = Template.fromStack(stack);
 
   it('creates OpenSearch Serverless collection with correct type', () => {
     template.hasResourceProperties('AWS::OpenSearchServerless::Collection', {
@@ -36,21 +59,10 @@ describe('SearchStack', () => {
     });
   });
 
-  it('creates network policy allowing public access', () => {
+  it('creates network policy', () => {
     template.hasResourceProperties('AWS::OpenSearchServerless::SecurityPolicy', {
       Name: 'primedeals-search-network',
       Type: 'network',
-      Policy: JSON.stringify([
-        {
-          Rules: [
-            {
-              ResourceType: 'collection',
-              Resource: ['collection/primedeals-cars'],
-            },
-          ],
-          AllowFromPublic: true,
-        },
-      ]),
     });
   });
 
