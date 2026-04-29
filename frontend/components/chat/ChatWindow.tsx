@@ -107,7 +107,7 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
       role="dialog"
       aria-labelledby="chat-header-title"
       aria-modal="true"
-      className="fixed bottom-24 right-6 z-50 flex flex-col bg-white shadow-xl animate-chat-slide-up
+      className="fixed bottom-24 right-6 z-[110] flex flex-col bg-white shadow-xl animate-chat-slide-up
         w-[calc(100vw-48px)] max-w-[400px] h-[calc(100vh-120px)] max-h-[600px]
         rounded-2xl overflow-hidden
         sm:w-[400px] sm:h-[600px] sm:max-h-[600px]

@@ -9,6 +9,7 @@ import { RefreshCw } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { MessageSkeleton } from './MessageSkeleton';
 import { TypingIndicator } from './TypingIndicator';
+import { parseCarReferences } from '@/lib/utils/parse-car-references';
 import type { ChatMessageDisplay } from '@/lib/types/chat';
 
 interface MessageListProps {
@@ -30,9 +31,28 @@ export function MessageList({
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // Auto-scroll to bottom on new messages or typing indicator
+  // Auto-scroll behavior:
+  // - Assistant replies with car listings: always show start of reply.
+  // - Mobile + assistant text reply: show start of assistant reply.
+  // - Otherwise (desktop, typing, user messages): keep bottom anchored.
   useEffect(() => {
+    if (messages.length === 0) return;
+
+    const latestMessage = messages[messages.length - 1];
+    const isMobileViewport = window.matchMedia('(max-width: 639px)').matches;
+
+    const assistantHasCarListings =
+      latestMessage?.role === 'assistant' &&
+      parseCarReferences(latestMessage.content).length > 0;
+
+    if (!isTyping && latestMessage?.role === 'assistant' && (assistantHasCarListings || isMobileViewport)) {
+      const latestAssistantRef = messageRefs.current[latestMessage.id];
+      latestAssistantRef?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
@@ -117,15 +137,21 @@ export function MessageList({
       aria-label="Chat messages"
     >
       {messages.map((message) => (
-        <MessageBubble
+        <div
           key={message.id}
-          message={message}
-          onRetry={
-            message.status === 'error' && onRetryMessage
-              ? () => onRetryMessage(message.id)
-              : undefined
-          }
-        />
+          ref={(node) => {
+            messageRefs.current[message.id] = node;
+          }}
+        >
+          <MessageBubble
+            message={message}
+            onRetry={
+              message.status === 'error' && onRetryMessage
+                ? () => onRetryMessage(message.id)
+                : undefined
+            }
+          />
+        </div>
       ))}
 
       {/* Typing indicator */}

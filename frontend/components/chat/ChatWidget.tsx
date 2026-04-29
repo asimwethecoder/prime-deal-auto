@@ -3,7 +3,7 @@
 // Chat Widget Root Component
 // Manages visibility, state, and renders button + window
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ChatButton } from './ChatButton';
@@ -25,6 +25,7 @@ export function ChatWidget() {
   const pathname = usePathname();
   const { isOpen, toggle, close, sessionId, setSessionId } = useChatStore();
   const [showNudge, setShowNudge] = useState(true);
+  const previousPathnameRef = useRef(pathname);
 
   // Check if chat should be visible on current route
   const isVisible = isChatVisibleOnRoute(pathname);
@@ -38,6 +39,16 @@ export function ChatWidget() {
       }
     }
   }, [sessionId, setSessionId]);
+
+  // Close chat when navigating to a different route.
+  // This prevents the full-screen mobile dialog from persisting over the next page.
+  useEffect(() => {
+    const previousPathname = previousPathnameRef.current;
+    if (isOpen && previousPathname && pathname && previousPathname !== pathname) {
+      close();
+    }
+    previousPathnameRef.current = pathname;
+  }, [pathname, isOpen, close]);
 
   const dismissNudge = useCallback(() => setShowNudge(false), []);
 
